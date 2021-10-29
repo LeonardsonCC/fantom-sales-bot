@@ -39,9 +39,13 @@ func main() {
 		for _, historyItem := range history.([]interface{}) {
 			fmt.Println(fmt.Sprintf("%v", historyItem))
 			saleValue, _ := strconv.ParseFloat(historyItem.(map[string]interface{})["data"].(string), 32)
-			fmt.Printf("Valor: %.2f\n", (math.Ceil(saleValue / math.Pow(10, 18))))
+			fmt.Printf("Valor: %.2f\n", bigIntToLegibleNumber(saleValue))
 		}
 	}
+}
+
+func bigIntToLegibleNumber(bigInt float64) float64 {
+	return math.Ceil(bigInt / math.Pow(10, 18))
 }
 
 func getSaleHistory(contractAddress string, tokenId uint, client *graphql.Client) interface{} {
@@ -67,7 +71,6 @@ func getSaleHistory(contractAddress string, tokenId uint, client *graphql.Client
 			}
 		}
 	`, strings.Join(idsToSearch, ","))
-	// fmt.Println(query)
 
 	req := graphql.NewRequest(query)
 	ctx := context.Background()
@@ -88,7 +91,6 @@ func getRecentSales(client *graphql.Client) interface{} {
 				where: {
 					isERC721s_contains:[true]
 					endTime_gt: "%v"
-					addresses: ["0xd5eb80f437c318b3bf8b3af985224966a3054f76"]
 				} 
 				first: 10
 				orderDirection: desc 
@@ -101,7 +103,6 @@ func getRecentSales(client *graphql.Client) interface{} {
 			}
 		}
 	`, 1637623400)
-	fmt.Println(query)
 
 	req := graphql.NewRequest(query)
 	ctx := context.Background()
