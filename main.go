@@ -91,8 +91,9 @@ func getRecentSales(client *graphql.Client) interface{} {
 				where: {
 					isERC721s_contains:[true]
 					endTime_gt: "%v"
+					addresses: ["0xfd211f3b016a75bc8d73550ac5adc2f1cae780c0"]
 				} 
-				first: 10
+				first: 100
 				orderDirection: desc 
 				orderBy: endTime
 			) {
@@ -102,7 +103,7 @@ func getRecentSales(client *graphql.Client) interface{} {
 				endTime
 			}
 		}
-	`, 1637623400)
+	`, 1631365200)
 
 	req := graphql.NewRequest(query)
 	ctx := context.Background()
