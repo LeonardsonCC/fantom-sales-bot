@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -35,10 +36,11 @@ func main() {
 		intTokenId, _ := strconv.ParseUint(tokenId, 10, 64)
 
 		history := getSaleHistory(address, uint(intTokenId), client)
-		fmt.Println(history)
-		// for _, historyItem := range history.([]interface{}) {
-		// 	fmt.Println(fmt.Sprintf("%v", historyItem))
-		// }
+		for _, historyItem := range history.([]interface{}) {
+			fmt.Println(fmt.Sprintf("%v", historyItem))
+			saleValue, _ := strconv.ParseFloat(historyItem.(map[string]interface{})["data"].(string), 32)
+			fmt.Printf("Valor: %.2f\n", (math.Ceil(saleValue / math.Pow(10, 18))))
+		}
 	}
 }
 
@@ -76,7 +78,7 @@ func getSaleHistory(contractAddress string, tokenId uint, client *graphql.Client
 		log.Fatal(err)
 	}
 
-	return response
+	return response["nfthistories"]
 }
 
 func getRecentSales(client *graphql.Client) interface{} {
@@ -86,8 +88,9 @@ func getRecentSales(client *graphql.Client) interface{} {
 				where: {
 					isERC721s_contains:[true]
 					endTime_gt: "%v"
+					addresses: ["0xd5eb80f437c318b3bf8b3af985224966a3054f76"]
 				} 
-				first: 5
+				first: 10
 				orderDirection: desc 
 				orderBy: endTime
 			) {
