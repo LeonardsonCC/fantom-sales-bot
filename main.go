@@ -71,8 +71,6 @@ func main() {
 
 	recentSales := getRecentSales(client)
 	for _, sale := range recentSales.([]interface{}) {
-		//fmt.Println(fmt.Sprintf("%v", sale))
-
 		address := sale.(map[string]interface{})["addresses"].([]interface{})[0].(string)
 		tokenId := sale.(map[string]interface{})["tokenIds"].([]interface{})[0].(string)
 		intTokenId, _ := strconv.ParseUint(tokenId, 10, 64)
@@ -104,8 +102,37 @@ func main() {
 			}
 			sale.LastSales = salesHistory
 
-			currentFtmPrice := getFantomPrice(time.Now().Format(layoutISO))
-			fmt.Println(fmt.Sprintf("%v | %v", sale, currentFtmPrice))
+			var boughtAction SaleHistoryItem = salesHistory[len(sale.LastSales)-2]
+			var soldAction SaleHistoryItem = salesHistory[len(sale.LastSales)-1]
+
+			var tweetMessage string = ""
+
+			boughtFantomPrice := getFantomPrice(time.Unix(boughtAction.Time, 0).Format(layoutISO))
+			soldFantomPrice := getFantomPrice(time.Unix(soldAction.Time, 0).Format(layoutISO))
+
+			tweetMessage += fmt.Sprintf("🛍 Bought: %v FTM @ $%.3f\n", boughtAction.Value, boughtFantomPrice)
+			tweetMessage += fmt.Sprintf("💰 Sold: %v FTM @ $%.3f\n", soldAction.Value, soldFantomPrice)
+
+			boughtAt := boughtAction.Value
+			soldAt := soldAction.Value
+			difference := soldAt - boughtAt
+			differenceDollar := (soldAt * soldFantomPrice) - (boughtAt * boughtFantomPrice)
+
+			if difference > 0 {
+				tweetMessage += fmt.Sprintf("📈 Gain: %v FTM\n", difference)
+			} else {
+				tweetMessage += fmt.Sprintf("📉 Loss: %v FTM\n", (difference * -1))
+			}
+
+			if differenceDollar > 0 {
+				tweetMessage += fmt.Sprintf("💵 Profit: $%.3f\n", differenceDollar)
+			} else {
+				tweetMessage += fmt.Sprintf("💵 Loss: $%.3f\n", (differenceDollar * -1))
+			}
+
+			tweetMessage += fmt.Sprintf("https://paintswap.finance/marketplace/%v", soldAction.ActionId)
+
+			fmt.Println(tweetMessage + "\n")
 		}
 	}
 }
@@ -117,8 +144,6 @@ func bigIntToLegibleNumber(bigInt float64) float64 {
 func getFantomPrice(dateString string) float64 {
 	t, _ := time.Parse(layoutISO, dateString)
 	validatedTime := t.Format(layoutISO)
-	fmt.Printf("DATA %v", validatedTime)
-	fmt.Printf(fmt.Sprintf("https://api.coingecko.com/api/v3/coins/fantom/history?date=%v", validatedTime))
 
 	resp, err := http.Get(fmt.Sprintf("https://api.coingecko.com/api/v3/coins/fantom/history?date=%v", validatedTime))
 	if err != nil {
