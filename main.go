@@ -2,17 +2,23 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"math"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/dghubble/go-twitter/twitter"
 	"github.com/dghubble/oauth1"
 	"github.com/machinebox/graphql"
 )
+
+const layoutISO = "02-01-2006"
 
 type SaleHistoryItem struct {
 	TxHash   string
@@ -40,6 +46,20 @@ type Sale struct {
 	EndTime   int64
 	Value     float64
 	LastSales SalesHistory
+}
+
+type PriceIn struct {
+	Usd float64 `json:"usd"`
+	Brl float64 `json:"brl"`
+}
+
+type MarketData struct {
+	CurrentPrice PriceIn `json:"current_price"`
+}
+
+type FantomPriceResponse struct {
+	Symbol     string     `json:"symbol"`
+	MarketData MarketData `json:"market_data"`
 }
 
 func main() {
@@ -84,13 +104,36 @@ func main() {
 			}
 			sale.LastSales = salesHistory
 
-			fmt.Println(fmt.Sprintf("%v", sale))
+			currentFtmPrice := getFantomPrice(time.Now().Format(layoutISO))
+			fmt.Println(fmt.Sprintf("%v | %v", sale, currentFtmPrice))
 		}
 	}
 }
 
 func bigIntToLegibleNumber(bigInt float64) float64 {
 	return math.Ceil(bigInt / math.Pow(10, 18))
+}
+
+func getFantomPrice(dateString string) float64 {
+	t, _ := time.Parse(layoutISO, dateString)
+	validatedTime := t.Format(layoutISO)
+	fmt.Printf("DATA %v", validatedTime)
+	fmt.Printf(fmt.Sprintf("https://api.coingecko.com/api/v3/coins/fantom/history?date=%v", validatedTime))
+
+	resp, err := http.Get(fmt.Sprintf("https://api.coingecko.com/api/v3/coins/fantom/history?date=%v", validatedTime))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	var response FantomPriceResponse
+	json.Unmarshal(body, &response)
+
+	return response.MarketData.CurrentPrice.Usd
 }
 
 func getSaleHistory(contractAddress string, tokenId uint, client *graphql.Client) interface{} {
