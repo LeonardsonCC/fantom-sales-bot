@@ -128,11 +128,10 @@ func main() {
 			}
 
 			if differenceDollar > 0 {
-				tweetMessage += fmt.Sprintf("💵 Profit: $%.3f\n", differenceDollar)
+				tweetMessage += fmt.Sprintf("💵 Profit: $%.2f (📈 %.2f%%)\n", differenceDollar, ((difference / boughtAt) * 100))
 			} else {
-				tweetMessage += fmt.Sprintf("💵 Loss: $%.2f\n", (differenceDollar * -1))
+				tweetMessage += fmt.Sprintf("💵 Loss: $%.2f (📈 %.2f%%)\n", (differenceDollar * -1), ((difference / boughtAt) * 100))
 			}
-
 			tweetMessage += fmt.Sprintf("https://paintswap.finance/marketplace/%v", soldAction.ActionId)
 
 			fmt.Println(tweetMessage + "\n")
