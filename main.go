@@ -110,13 +110,16 @@ func main() {
 			boughtFantomPrice := getFantomPrice(time.Unix(boughtAction.Time, 0).Format(layoutISO))
 			soldFantomPrice := getFantomPrice(time.Unix(soldAction.Time, 0).Format(layoutISO))
 
-			tweetMessage += fmt.Sprintf("🛍 Bought: %v FTM @ $%.3f\n", boughtAction.Value, boughtFantomPrice)
-			tweetMessage += fmt.Sprintf("💰 Sold: %v FTM @ $%.3f\n", soldAction.Value, soldFantomPrice)
+			tweetMessage += fmt.Sprintf("🛍 Bought: %v FTM @ $%.2f\n", boughtAction.Value, boughtFantomPrice)
+			tweetMessage += fmt.Sprintf("💰 Sold: %v FTM @ $%.2f\n", soldAction.Value, soldFantomPrice)
 
 			boughtAt := boughtAction.Value
 			soldAt := soldAction.Value
 			difference := soldAt - boughtAt
 			differenceDollar := (soldAt * soldFantomPrice) - (boughtAt * boughtFantomPrice)
+
+			dateDifference := time.Unix(soldAction.Time, 0).Sub(time.Unix(boughtAction.Time, 0))
+			tweetMessage += fmt.Sprintf("🤝 HODL duration: %.0f days\n", dateDifference.Hours()/24)
 
 			if difference > 0 {
 				tweetMessage += fmt.Sprintf("📈 Gain: %v FTM\n", difference)
@@ -127,7 +130,7 @@ func main() {
 			if differenceDollar > 0 {
 				tweetMessage += fmt.Sprintf("💵 Profit: $%.3f\n", differenceDollar)
 			} else {
-				tweetMessage += fmt.Sprintf("💵 Loss: $%.3f\n", (differenceDollar * -1))
+				tweetMessage += fmt.Sprintf("💵 Loss: $%.2f\n", (differenceDollar * -1))
 			}
 
 			tweetMessage += fmt.Sprintf("https://paintswap.finance/marketplace/%v", soldAction.ActionId)
