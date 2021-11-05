@@ -79,7 +79,9 @@ func main() {
 
 			go fetchSaleHistoryAndTweet(twitterClient, client, sale, tokenId, address)
 		}
+		fmt.Println("Waiting 5 minutes")
 		time.Sleep(time.Minute * 5)
+		fmt.Println("Less go")
 	}
 }
 
@@ -105,7 +107,8 @@ func getFantomPrice(dateString string) float64 {
 	json.Unmarshal(body, &response)
 
 	if response.MarketData.CurrentPrice.Usd == 0 {
-		fmt.Println("Coingeck returned 0 in USD price... Trying again")
+		fmt.Println("Coingecko returned 0 in USD price... Trying again")
+		time.Sleep(time.Second * 10)
 		return getFantomPrice(dateString)
 	}
 
@@ -171,7 +174,7 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 		if differenceDollar > 0 {
 			tweetMessage += fmt.Sprintf("💵 Profit: $%.2f (📈 %.2f%%)\n", differenceDollar, ((difference / boughtAt) * 100))
 		} else {
-			tweetMessage += fmt.Sprintf("💵 Loss: $%.2f (📈 %.2f%%)\n", (differenceDollar * -1), ((difference / boughtAt) * 100))
+			tweetMessage += fmt.Sprintf("💵 Loss: $%.2f (📉 %.2f%%)\n", (differenceDollar * -1), ((difference / boughtAt) * 100))
 		}
 		tweetMessage += fmt.Sprintf("https://paintswap.finance/marketplace/%v", soldAction.ActionId)
 
@@ -239,6 +242,8 @@ func getRecentSales(client *graphql.Client) interface{} {
 		}
     `, currentTime.Unix()) // TODO: remove hardcoded time and contract to use the last update time
 
+	currentTime = currentTime.Add(time.Minute * time.Duration(5))
+
 	req := graphql.NewRequest(query)
 	ctx := context.Background()
 
@@ -247,8 +252,6 @@ func getRecentSales(client *graphql.Client) interface{} {
 	if err := client.Run(ctx, req, &response); err != nil {
 		log.Fatal(err)
 	}
-
-	currentTime = currentTime.Add(time.Minute * time.Duration(5))
 
 	return response["sales"]
 }
