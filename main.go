@@ -74,10 +74,11 @@ func main() {
 
 		recentSales := getRecentSales(client)
 		for _, sale := range recentSales.([]interface{}) {
-			address := sale.(map[string]interface{})["id"].([]interface{})[0].(string)
-			address = strings.Split(address, "_")[0]
+			address := sale.(map[string]interface{})["id"].(string)
+			splittedAddres := strings.Split(address, "_")
+			address = splittedAddres[0]
 
-			tokenId := strings.Split(address, "_")[1]
+			tokenId := splittedAddres[1]
 
 			go fetchSaleHistoryAndTweet(twitterClient, client, sale, tokenId, address)
 		}
@@ -181,7 +182,7 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 		tweetMessage += fmt.Sprintf("https://paintswap.finance/marketplace/%v", soldAction.ActionId)
 
 		fmt.Println(tweetMessage + "\n")
-		// twitterClient.Statuses.Update(tweetMessage, nil)
+		twitterClient.Statuses.Update(tweetMessage, nil)
 	}
 }
 
@@ -235,9 +236,12 @@ func getRecentSales(client *graphql.Client) interface{} {
     		data
 				hash
     		actionId
+				timestamp
   		}
 		}
     `, currentTime.Unix()) // TODO: remove hardcoded time and contract to use the last update time
+
+	fmt.Println(query)
 
 	req := graphql.NewRequest(query)
 	ctx := context.Background()
