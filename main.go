@@ -74,8 +74,10 @@ func main() {
 
 		recentSales := getRecentSales(client)
 		for _, sale := range recentSales.([]interface{}) {
-			address := sale.(map[string]interface{})["addresses"].([]interface{})[0].(string)
-			tokenId := sale.(map[string]interface{})["tokenIds"].([]interface{})[0].(string)
+			address := sale.(map[string]interface{})["id"].([]interface{})[0].(string)
+			address = strings.Split(address, "_")[0]
+
+			tokenId := strings.Split(address, "_")[1]
 
 			go fetchSaleHistoryAndTweet(twitterClient, client, sale, tokenId, address)
 		}
@@ -119,8 +121,8 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 	intTokenId, _ := strconv.ParseUint(tokenId, 10, 64)
 	history := getSaleHistory(address, uint(intTokenId), client)
 	if len(history.([]interface{})) > 1 {
-		endTime, _ := strconv.ParseInt(sale.(map[string]interface{})["endTime"].(string), 10, 64)
-		price, _ := strconv.ParseFloat(sale.(map[string]interface{})["price"].(string), 64)
+		endTime, _ := strconv.ParseInt(sale.(map[string]interface{})["timestamp"].(string), 10, 64)
+		price, _ := strconv.ParseFloat(sale.(map[string]interface{})["data"].(string), 64)
 		var sale *Sale = &Sale{
 			Id:        sale.(map[string]interface{})["id"].(string),
 			Addresses: []string{address},
@@ -179,7 +181,7 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 		tweetMessage += fmt.Sprintf("https://paintswap.finance/marketplace/%v", soldAction.ActionId)
 
 		fmt.Println(tweetMessage + "\n")
-		twitterClient.Statuses.Update(tweetMessage, nil)
+		// twitterClient.Statuses.Update(tweetMessage, nil)
 	}
 }
 
@@ -220,29 +222,22 @@ func getSaleHistory(contractAddress string, tokenId uint, client *graphql.Client
 }
 
 func getRecentSales(client *graphql.Client) interface{} {
+	currentTime = currentTime.Add(-(time.Minute * time.Duration(5)))
+
 	query := fmt.Sprintf(`
 		query {
-			sales(
-				where: {
-					isERC721s_contains:[true]
-					endTime_gt: "%v"
-          complete: true
-          sold: true
-				} 
-				first: 100
-				orderDirection: desc 
-				orderBy: endTime
-			) {
-				id
-				addresses
-				tokenIds
-				endTime
-        price
-			}
+			nfthistories(where: {
+        timestamp_gte: %v,
+        action: Sold
+      }) {
+    		id
+    		action
+    		data
+				hash
+    		actionId
+  		}
 		}
     `, currentTime.Unix()) // TODO: remove hardcoded time and contract to use the last update time
-
-	currentTime = currentTime.Add(time.Minute * time.Duration(5))
 
 	req := graphql.NewRequest(query)
 	ctx := context.Background()
@@ -253,7 +248,7 @@ func getRecentSales(client *graphql.Client) interface{} {
 		log.Fatal(err)
 	}
 
-	return response["sales"]
+	return response["nfthistories"]
 }
 
 func getTwitterConfig() *twitter.Client {
