@@ -1,12 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"math"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"strconv"
@@ -62,6 +64,27 @@ type FantomPriceResponse struct {
 	MarketData MarketData `json:"market_data"`
 }
 
+type TwitterUploadResponse struct {
+	MediaId             int64  `json:"media_id"`
+	MediaIdString       string `json:"media_id_string"`
+	Size                int64  `json:"size"`
+	ExpiresAfterSeconds int64  `json:"expires_after_secs"`
+}
+
+type NftApi struct {
+	Image string `json:"image"`
+}
+
+type PaintSwapNft struct {
+	Address string `json:"address"`
+	TokenId uint   `json:"tokenId"`
+	Uri     string `json:"uri"`
+}
+
+type PaintSwapNftResponse struct {
+	Nft PaintSwapNft `json:"nft"`
+}
+
 var currentTime time.Time = time.Now()
 
 func main() {
@@ -86,36 +109,6 @@ func main() {
 		time.Sleep(time.Minute * 5)
 		fmt.Println("Less go")
 	}
-}
-
-func bigIntToLegibleNumber(bigInt float64) float64 {
-	return math.Ceil(bigInt / math.Pow(10, 18))
-}
-
-func getFantomPrice(dateString string) float64 {
-	t, _ := time.Parse(layoutISO, dateString)
-	validatedTime := t.Format(layoutISO)
-
-	resp, err := http.Get(fmt.Sprintf("https://api.coingecko.com/api/v3/coins/fantom/history?date=%v", validatedTime))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	var response FantomPriceResponse
-	json.Unmarshal(body, &response)
-
-	if response.MarketData.CurrentPrice.Usd == 0 {
-		fmt.Println("Coingecko returned 0 in USD price... Trying again")
-		time.Sleep(time.Second * 10)
-		return getFantomPrice(dateString)
-	}
-
-	return response.MarketData.CurrentPrice.Usd
 }
 
 func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Client, sale interface{}, tokenId string, address string) {
@@ -150,7 +143,7 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 		var boughtAction SaleHistoryItem = salesHistory[len(sale.LastSales)-2]
 		var soldAction SaleHistoryItem = salesHistory[len(sale.LastSales)-1]
 
-		var tweetMessage string = ""
+		var tweetMessage string = "=========== TEST ===========\n"
 
 		tweetMessage += fmt.Sprintf("🧾 Contract: %v\n\n", strings.Join(sale.Addresses, ","))
 
@@ -179,11 +172,89 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 		} else {
 			tweetMessage += fmt.Sprintf("💵 Loss: $%.2f (📉 %.2f%%)\n", (differenceDollar * -1), ((difference / boughtAt) * 100))
 		}
-		tweetMessage += fmt.Sprintf("https://paintswap.finance/marketplace/%v", soldAction.ActionId)
+		// tweetMessage += fmt.Sprintf("https://paintswap.finance/marketplace/%v", soldAction.ActionId)
+
+		tweetMessage += fmt.Sprintf("%v", getNftImage(address, tokenId))
 
 		fmt.Println(tweetMessage + "\n")
-		twitterClient.Statuses.Update(tweetMessage, nil)
+		// fmt.Printf("\n\n\n\n%v\n\n\n\n\n", uploadImageToTwitter(twitterClient, getNftImage(address, tokenId)))
+		uploadImageToTwitter(twitterClient, getNftImage(address, tokenId))
+
+		// twitterClient.Statuses.Update(tweetMessage, nil)
 	}
+}
+
+func bigIntToLegibleNumber(bigInt float64) float64 {
+	return math.Ceil(bigInt / math.Pow(10, 18))
+}
+
+func clearNftUrl(url string) string {
+	return strings.Replace(url, "ipfs://", "https://cloudflare-ipfs.com/ipfs/", 1)
+}
+
+func getNftImage(contractAddress string, tokenId string) string {
+	imageUrl := clearNftUrl(getNftImageUrl(contractAddress, tokenId))
+
+	resp, err := http.Get(imageUrl)
+	if err != nil {
+		fmt.Println(err)
+		return ""
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println(err)
+		return ""
+	}
+
+	var response NftApi
+	json.Unmarshal(body, &response)
+
+	return response.Image
+}
+
+func getNftImageUrl(contractAddress string, tokenId string) string {
+	resp, err := http.Get(fmt.Sprintf("https://api.paintswap.finance/nft/%v/%v?allowNSFW=true&numToFetch=10", contractAddress, tokenId))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	var response PaintSwapNftResponse
+	json.Unmarshal(body, &response)
+
+	return response.Nft.Uri
+}
+
+func getFantomPrice(dateString string) float64 {
+	t, _ := time.Parse(layoutISO, dateString)
+	validatedTime := t.Format(layoutISO)
+
+	resp, err := http.Get(fmt.Sprintf("https://api.coingecko.com/api/v3/coins/fantom/history?date=%v", validatedTime))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	var response FantomPriceResponse
+	json.Unmarshal(body, &response)
+
+	if response.MarketData.CurrentPrice.Usd == 0 {
+		fmt.Println("Coingecko returned 0 in USD price... Trying again")
+		time.Sleep(time.Second * 10)
+		return getFantomPrice(dateString)
+	}
+
+	return response.MarketData.CurrentPrice.Usd
 }
 
 func getSaleHistory(contractAddress string, tokenId uint, client *graphql.Client) interface{} {
@@ -227,7 +298,8 @@ func getRecentSales(client *graphql.Client) interface{} {
 
 	query := fmt.Sprintf(`
 		query {
-			nfthistories(where: {
+			nfthistories(
+    where: {
         timestamp_gte: %v,
         action: Sold
       }) {
@@ -239,9 +311,7 @@ func getRecentSales(client *graphql.Client) interface{} {
 				timestamp
   		}
 		}
-    `, currentTime.Unix()) // TODO: remove hardcoded time and contract to use the last update time
-
-	fmt.Println(query)
+    `, 1636077775) // TODO: remove hardcoded time and contract to use the last update time
 
 	req := graphql.NewRequest(query)
 	ctx := context.Background()
@@ -253,6 +323,42 @@ func getRecentSales(client *graphql.Client) interface{} {
 	}
 
 	return response["nfthistories"]
+}
+
+func uploadImageToTwitter(twitterClient *twitter.Client, nftUrl string) int64 {
+	respNft, errNft := http.Get(clearNftUrl(nftUrl))
+	if errNft != nil {
+		log.Fatal(errNft)
+	}
+
+	bodyNft, err := ioutil.ReadAll(respNft.Body)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	var bodyBuffer bytes.Buffer
+	var bodyWriter *multipart.Writer = multipart.NewWriter(&bodyBuffer)
+
+	x, _ := bodyWriter.CreateFormField("media")
+	x.Write(bodyNft)
+	contentType := bodyWriter.FormDataContentType()
+	bodyWriter.Close()
+
+	resp, err := http.Post("https://upload.twitter.com/1.1/media/upload.json", contentType, &bodyBuffer)
+	if err != nil {
+		log.Fatal(err)
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	fmt.Printf("RESPONSE %v", string(body))
+
+	var response TwitterUploadResponse
+	json.Unmarshal(body, &response)
+
+	return response.MediaId
 }
 
 func getTwitterConfig() *twitter.Client {
