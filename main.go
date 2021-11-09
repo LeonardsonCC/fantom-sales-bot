@@ -25,6 +25,8 @@ type SaleHistoryItem struct {
 	ActionId string
 	Value    float64
 	Time     int64
+	Version  int32
+	Token    string
 }
 
 type SalesHistory []SaleHistoryItem
@@ -109,6 +111,32 @@ func main() {
 	}
 }
 
+func getPrice(token string, dateString string) float64 {
+	t, _ := time.Parse(layoutISO, dateString)
+	validatedTime := t.Format(layoutISO)
+
+	resp, err := http.Get(fmt.Sprintf("https://api.coingecko.com/api/v3/coins/%s/history?date=%v", token, validatedTime))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	var response FantomPriceResponse
+	json.Unmarshal(body, &response)
+
+	if response.MarketData.CurrentPrice.Usd == 0 {
+		fmt.Println("Coingecko returned 0 in USD price... Trying again")
+		time.Sleep(time.Second * 10)
+		return getPrice(token, dateString)
+	}
+
+	return response.MarketData.CurrentPrice.Usd
+}
+
 func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Client, sale interface{}, tokenId string, address string) {
 	intTokenId, _ := strconv.ParseUint(tokenId, 10, 64)
 	history := getSaleHistory(address, uint(intTokenId), client)
@@ -127,13 +155,29 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 		for _, historyItem := range history.([]interface{}) {
 			saleValue, _ := strconv.ParseFloat(historyItem.(map[string]interface{})["data"].(string), 32)
 			saleTime, _ := strconv.ParseInt(historyItem.(map[string]interface{})["timestamp"].(string), 10, 64)
+			version, _ := historyItem.(map[string]interface{})["version"].(float64)
 
 			var oldSale *SaleHistoryItem = &SaleHistoryItem{
 				TxHash:   historyItem.(map[string]interface{})["hash"].(string),
 				ActionId: historyItem.(map[string]interface{})["actionId"].(string),
 				Value:    bigIntToLegibleNumber(saleValue),
 				Time:     saleTime,
+				Version:  int32(version),
 			}
+
+			if oldSale.Version == 1 {
+				oldSale.Token = "paint-swap"
+				brushPrice := getPrice(oldSale.Token, time.Unix(oldSale.Time, 0).Format(layoutISO))
+				fantomPrice := getPrice("fantom", time.Unix(oldSale.Time, 0).Format(layoutISO))
+
+				totalBrushInUsd := oldSale.Value * brushPrice
+				totalFtmValue := totalBrushInUsd / fantomPrice
+
+				oldSale.Value = totalFtmValue
+			} else {
+				oldSale.Token = "fantom"
+			}
+
 			salesHistory = append(salesHistory, *oldSale)
 		}
 		sale.LastSales = salesHistory
@@ -145,11 +189,11 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 
 		tweetMessage += fmt.Sprintf("🧾 Contract: %v\n\n", strings.Join(sale.Addresses, ","))
 
-		boughtFantomPrice := getFantomPrice(time.Unix(boughtAction.Time, 0).Format(layoutISO))
-		soldFantomPrice := getFantomPrice(time.Unix(soldAction.Time, 0).Format(layoutISO))
+		boughtFantomPrice := getPrice("fantom", time.Unix(boughtAction.Time, 0).Format(layoutISO))
+		soldFantomPrice := getPrice("fantom", time.Unix(soldAction.Time, 0).Format(layoutISO))
 
-		tweetMessage += fmt.Sprintf("🛍 Bought: %v FTM @ $%.2f\n", boughtAction.Value, boughtFantomPrice)
-		tweetMessage += fmt.Sprintf("💰 Sold: %v FTM @ $%.2f\n", soldAction.Value, soldFantomPrice)
+		tweetMessage += fmt.Sprintf("🛍 Bought: %.2f FTM @ $%.2f\n", boughtAction.Value, boughtFantomPrice)
+		tweetMessage += fmt.Sprintf("💰 Sold: %.2f FTM @ $%.2f\n", soldAction.Value, soldFantomPrice)
 
 		boughtAt := boughtAction.Value
 		soldAt := soldAction.Value
@@ -160,9 +204,9 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 		tweetMessage += fmt.Sprintf("🤝 HODL duration: %.0f days\n", dateDifference.Hours()/24)
 
 		if difference > 0 {
-			tweetMessage += fmt.Sprintf("📈 Gain: %v FTM\n", difference)
+			tweetMessage += fmt.Sprintf("📈 Gain: %.2f FTM\n", difference)
 		} else {
-			tweetMessage += fmt.Sprintf("📉 Loss: %v FTM\n", (difference * -1))
+			tweetMessage += fmt.Sprintf("📉 Loss: %.2f FTM\n", (difference * -1))
 		}
 
 		if differenceDollar > 0 {
@@ -276,6 +320,7 @@ func getSaleHistory(contractAddress string, tokenId uint, client *graphql.Client
 				data
 				timestamp
 				hash
+				version
 			}
 		}
 	`, strings.Join(idsToSearch, ","))
@@ -308,6 +353,7 @@ func getRecentSales(client *graphql.Client) interface{} {
 				hash
     		actionId
 				timestamp
+				version
   		}
 		}
     `, 1636077775) // TODO: remove hardcoded time and contract to use the last update time
