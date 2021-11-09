@@ -218,21 +218,26 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 		}
 		tweetMessage += fmt.Sprintf("https://paintswap.finance/marketplace/%v", soldAction.ActionId)
 
-		fmt.Println(tweetMessage + "\n")
-		nftImage, err := getNftImage(address, tokenId)
+		fmt.Printf("====================\n%v\n====================\n", tweetMessage)
+		Tweet(twitterClient, tweetMessage, address, tokenId)
+	}
+}
+
+func Tweet(twitterClient *twitter.Client, tweetMessage string, address string, tokenId string) {
+	nftImage, err := getNftImage(address, tokenId)
+
+	if err != nil {
+		twitterClient.Statuses.Update(tweetMessage, &twitter.StatusUpdateParams{})
+		fmt.Println("tweeting without image")
+	} else {
+		mediaId, err := uploadImageToTwitter(twitterClient, nftImage)
 		if err != nil {
-			fmt.Println("error getting nft image")
 			twitterClient.Statuses.Update(tweetMessage, &twitter.StatusUpdateParams{})
-		} else {
-			mediaId, err := uploadImageToTwitter(twitterClient, nftImage)
-			if err != nil {
-				twitterClient.Statuses.Update(tweetMessage, &twitter.StatusUpdateParams{})
-				return
-			}
-			twitterClient.Statuses.Update(tweetMessage, &twitter.StatusUpdateParams{
-				MediaIds: []int64{mediaId},
-			})
 		}
+		twitterClient.Statuses.Update(tweetMessage, &twitter.StatusUpdateParams{
+			MediaIds: []int64{mediaId},
+		})
+		fmt.Println("tweeting with image")
 	}
 }
 
