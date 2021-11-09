@@ -203,7 +203,7 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 		differenceDollar := (soldAt * soldFantomPrice) - (boughtAt * boughtFantomPrice)
 
 		dateDifference := time.Unix(soldAction.Time, 0).Sub(time.Unix(boughtAction.Time, 0))
-		tweetMessage += fmt.Sprintf("🤝 HODL duration: %.0f days\n", dateDifference.Hours()/24)
+		tweetMessage += fmt.Sprintf("🤝 HODL: %.0f days\n", dateDifference.Hours()/24)
 
 		if difference > 0 {
 			tweetMessage += fmt.Sprintf("📈 Gain: %.2f FTM\n", difference)
