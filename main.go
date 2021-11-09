@@ -224,7 +224,11 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 			fmt.Println("error getting nft image")
 			twitterClient.Statuses.Update(tweetMessage, &twitter.StatusUpdateParams{})
 		} else {
-			mediaId := uploadImageToTwitter(twitterClient, nftImage)
+			mediaId, err := uploadImageToTwitter(twitterClient, nftImage)
+			if err != nil {
+				twitterClient.Statuses.Update(tweetMessage, &twitter.StatusUpdateParams{})
+				return
+			}
 			twitterClient.Statuses.Update(tweetMessage, &twitter.StatusUpdateParams{
 				MediaIds: []int64{mediaId},
 			})
@@ -379,30 +383,24 @@ func getRecentSales(client *graphql.Client) interface{} {
 	return response["nfthistories"]
 }
 
-func uploadImageToTwitter(twitterClient *twitter.Client, nftUrl string) int64 {
+func uploadImageToTwitter(twitterClient *twitter.Client, nftUrl string) (int64, error) {
 	respNft, errNft := http.Get(clearNftUrl(nftUrl))
 	if errNft != nil {
-		fmt.Println("error upload_image")
-		time.Sleep(time.Second * 10)
-		uploadImageToTwitter(twitterClient, nftUrl)
+		return 0, errors.New("failed to get nft image")
 	}
 
 	bodyNft, err := ioutil.ReadAll(respNft.Body)
 	if err != nil {
-		fmt.Println("error upload_image reading body")
-		time.Sleep(time.Second * 10)
-		uploadImageToTwitter(twitterClient, nftUrl)
+		return 0, errors.New("failed to read nft image")
 	}
 
 	fmt.Println("Uploading image to twitter...")
 	media, _, err := twitterClient.Media.Upload(bodyNft, "tweet_image")
 	if err != nil {
-		fmt.Println("error upload_image request")
-		time.Sleep(time.Second * 10)
-		uploadImageToTwitter(twitterClient, nftUrl)
+		return 0, errors.New("failed to upload image to twitter")
 	}
 
-	return media.MediaID
+	return media.MediaID, nil
 }
 
 func getTwitterConfig() *twitter.Client {
