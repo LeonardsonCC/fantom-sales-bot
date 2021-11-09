@@ -107,6 +107,7 @@ func main() {
 		}
 		fmt.Println("Waiting 5 minutes")
 		time.Sleep(time.Minute * 5)
+		currentTime = time.Now()
 		fmt.Println("Less go")
 	}
 }
