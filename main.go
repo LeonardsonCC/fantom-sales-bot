@@ -185,7 +185,7 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 		var boughtAction SaleHistoryItem = salesHistory[len(sale.LastSales)-2]
 		var soldAction SaleHistoryItem = salesHistory[len(sale.LastSales)-1]
 
-		var tweetMessage string = "=========== TEST ===========\n"
+		var tweetMessage string = ""
 
 		tweetMessage += fmt.Sprintf("🧾 Contract: %v\n\n", strings.Join(sale.Addresses, ","))
 
@@ -356,7 +356,7 @@ func getRecentSales(client *graphql.Client) interface{} {
 				version
   		}
 		}
-    `, 1636077775) // TODO: remove hardcoded time and contract to use the last update time
+    `, currentTime.Unix())
 
 	req := graphql.NewRequest(query)
 	ctx := context.Background()
