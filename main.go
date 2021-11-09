@@ -1,14 +1,12 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"math"
-	"mime/multipart"
 	"net/http"
 	"os"
 	"strconv"
@@ -172,15 +170,16 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 		} else {
 			tweetMessage += fmt.Sprintf("💵 Loss: $%.2f (📉 %.2f%%)\n", (differenceDollar * -1), ((difference / boughtAt) * 100))
 		}
-		// tweetMessage += fmt.Sprintf("https://paintswap.finance/marketplace/%v", soldAction.ActionId)
+		tweetMessage += fmt.Sprintf("https://paintswap.finance/marketplace/%v", soldAction.ActionId)
 
 		tweetMessage += fmt.Sprintf("%v", getNftImage(address, tokenId))
 
 		fmt.Println(tweetMessage + "\n")
-		// fmt.Printf("\n\n\n\n%v\n\n\n\n\n", uploadImageToTwitter(twitterClient, getNftImage(address, tokenId)))
-		uploadImageToTwitter(twitterClient, getNftImage(address, tokenId))
+		mediaId := uploadImageToTwitter(twitterClient, getNftImage(address, tokenId))
 
-		// twitterClient.Statuses.Update(tweetMessage, nil)
+		twitterClient.Statuses.Update(tweetMessage, &twitter.StatusUpdateParams{
+			MediaIds: []int64{mediaId},
+		})
 	}
 }
 
@@ -336,29 +335,13 @@ func uploadImageToTwitter(twitterClient *twitter.Client, nftUrl string) int64 {
 		log.Fatalln(err)
 	}
 
-	var bodyBuffer bytes.Buffer
-	var bodyWriter *multipart.Writer = multipart.NewWriter(&bodyBuffer)
-
-	x, _ := bodyWriter.CreateFormField("media")
-	x.Write(bodyNft)
-	contentType := bodyWriter.FormDataContentType()
-	bodyWriter.Close()
-
-	resp, err := http.Post("https://upload.twitter.com/1.1/media/upload.json", contentType, &bodyBuffer)
+	fmt.Println("Uploading image to twitter...")
+	media, _, err := twitterClient.Media.Upload(bodyNft, "tweet_image")
 	if err != nil {
 		log.Fatal(err)
 	}
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatalln(err)
-	}
 
-	fmt.Printf("RESPONSE %v", string(body))
-
-	var response TwitterUploadResponse
-	json.Unmarshal(body, &response)
-
-	return response.MediaId
+	return media.MediaID
 }
 
 func getTwitterConfig() *twitter.Client {
