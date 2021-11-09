@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -218,11 +219,16 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 		tweetMessage += fmt.Sprintf("https://paintswap.finance/marketplace/%v", soldAction.ActionId)
 
 		fmt.Println(tweetMessage + "\n")
-		mediaId := uploadImageToTwitter(twitterClient, getNftImage(address, tokenId))
-
-		twitterClient.Statuses.Update(tweetMessage, &twitter.StatusUpdateParams{
-			MediaIds: []int64{mediaId},
-		})
+		nftImage, err := getNftImage(address, tokenId)
+		if err != nil {
+			fmt.Println("error getting nft image")
+			twitterClient.Statuses.Update(tweetMessage, &twitter.StatusUpdateParams{})
+		} else {
+			mediaId := uploadImageToTwitter(twitterClient, nftImage)
+			twitterClient.Statuses.Update(tweetMessage, &twitter.StatusUpdateParams{
+				MediaIds: []int64{mediaId},
+			})
+		}
 	}
 }
 
@@ -234,26 +240,30 @@ func clearNftUrl(url string) string {
 	return strings.Replace(url, "ipfs://", "https://cloudflare-ipfs.com/ipfs/", 1)
 }
 
-func getNftImage(contractAddress string, tokenId string) string {
-	imageUrl := clearNftUrl(getNftImageUrl(contractAddress, tokenId))
+func getNftImage(contractAddress string, tokenId string) (string, error) {
+	var nftUrl string = getNftImageUrl(contractAddress, tokenId)
+	if !strings.HasPrefix(nftUrl, "https://") {
+		return "", errors.New("invalid nft url")
+	}
+	imageUrl := clearNftUrl(nftUrl)
 
 	resp, err := http.Get(imageUrl)
 	if err != nil {
 		fmt.Println(err)
-		return ""
+		return "", errors.New("failed to get nft image url")
 	}
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Println(err)
-		return ""
+		return "", errors.New("failed to read nft image")
 	}
 
 	var response NftApi
 	json.Unmarshal(body, &response)
 
-	return response.Image
+	return response.Image, nil
 }
 
 func getNftImageUrl(contractAddress string, tokenId string) string {
@@ -342,19 +352,19 @@ func getRecentSales(client *graphql.Client) interface{} {
 	query := fmt.Sprintf(`
 		query {
 			nfthistories(
-    where: {
-        timestamp_gte: %v,
-        action: Sold
-      }) {
-    		id
-    		action
-    		data
-				hash
-    		actionId
-				timestamp
-				version
-  		}
-		}
+			where: {
+					timestamp_gte: %v,
+					action: Sold
+				}) {
+					id
+					action
+					data
+					hash
+					actionId
+					timestamp
+					version
+				}
+			}
     `, currentTime.Unix())
 
 	req := graphql.NewRequest(query)
