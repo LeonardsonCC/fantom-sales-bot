@@ -216,8 +216,6 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 		}
 		tweetMessage += fmt.Sprintf("https://paintswap.finance/marketplace/%v", soldAction.ActionId)
 
-		tweetMessage += fmt.Sprintf("%v", getNftImage(address, tokenId))
-
 		fmt.Println(tweetMessage + "\n")
 		mediaId := uploadImageToTwitter(twitterClient, getNftImage(address, tokenId))
 
