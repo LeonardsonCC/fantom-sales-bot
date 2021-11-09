@@ -241,11 +241,11 @@ func clearNftUrl(url string) string {
 }
 
 func getNftImage(contractAddress string, tokenId string) (string, error) {
-	var nftUrl string = getNftImageUrl(contractAddress, tokenId)
+	var nftUrl string = clearNftUrl(getNftImageUrl(contractAddress, tokenId))
 	if !strings.HasPrefix(nftUrl, "https://") {
-		return "", errors.New("invalid nft url")
+		return "", errors.New(fmt.Sprintf("invalid nft url: %v", nftUrl))
 	}
-	imageUrl := clearNftUrl(nftUrl)
+	imageUrl := nftUrl
 
 	resp, err := http.Get(imageUrl)
 	if err != nil {
