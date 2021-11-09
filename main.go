@@ -382,18 +382,24 @@ func getRecentSales(client *graphql.Client) interface{} {
 func uploadImageToTwitter(twitterClient *twitter.Client, nftUrl string) int64 {
 	respNft, errNft := http.Get(clearNftUrl(nftUrl))
 	if errNft != nil {
-		log.Fatal(errNft)
+		fmt.Println("error upload_image")
+		time.Sleep(time.Second * 10)
+		uploadImageToTwitter(twitterClient, nftUrl)
 	}
 
 	bodyNft, err := ioutil.ReadAll(respNft.Body)
 	if err != nil {
-		log.Fatalln(err)
+		fmt.Println("error upload_image reading body")
+		time.Sleep(time.Second * 10)
+		uploadImageToTwitter(twitterClient, nftUrl)
 	}
 
 	fmt.Println("Uploading image to twitter...")
 	media, _, err := twitterClient.Media.Upload(bodyNft, "tweet_image")
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("error upload_image request")
+		time.Sleep(time.Second * 10)
+		uploadImageToTwitter(twitterClient, nftUrl)
 	}
 
 	return media.MediaID
