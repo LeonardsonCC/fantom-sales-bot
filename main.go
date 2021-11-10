@@ -323,7 +323,7 @@ func getNftImageUrl(contractAddress string, tokenId string) string {
 }
 
 func getSaleHistory(contractAddress string, tokenId uint, client *graphql.Client) interface{} {
-	commonIndexes := make([]uint, 10)
+	commonIndexes := make([]uint, 40)
 	var idsToSearch []string
 	for i := range commonIndexes {
 		idsToSearch = append(idsToSearch, fmt.Sprintf("\"%s_%d_%v\"", contractAddress, tokenId, i))
