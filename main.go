@@ -252,7 +252,7 @@ func clearNftUrl(url string) string {
 func getNftImage(contractAddress string, tokenId string) (string, error) {
 	var nftUrl string = clearNftUrl(getNftImageUrl(contractAddress, tokenId))
 	if !strings.HasPrefix(nftUrl, "https://") {
-		return "", errors.New(fmt.Sprintf("invalid nft url: %v", nftUrl))
+		return "", fmt.Errorf("invalid nft url: %v", nftUrl)
 	}
 	imageUrl := nftUrl
 
@@ -290,32 +290,6 @@ func getNftImageUrl(contractAddress string, tokenId string) string {
 	json.Unmarshal(body, &response)
 
 	return response.Nft.Uri
-}
-
-func getFantomPrice(dateString string) float64 {
-	t, _ := time.Parse(layoutISO, dateString)
-	validatedTime := t.Format(layoutISO)
-
-	resp, err := http.Get(fmt.Sprintf("https://api.coingecko.com/api/v3/coins/fantom/history?date=%v", validatedTime))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	var response FantomPriceResponse
-	json.Unmarshal(body, &response)
-
-	if response.MarketData.CurrentPrice.Usd == 0 {
-		fmt.Println("Coingecko returned 0 in USD price... Trying again")
-		time.Sleep(time.Second * 10)
-		return getFantomPrice(dateString)
-	}
-
-	return response.MarketData.CurrentPrice.Usd
 }
 
 func getSaleHistory(contractAddress string, tokenId uint, client *graphql.Client) interface{} {
