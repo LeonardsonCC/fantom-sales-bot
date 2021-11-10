@@ -16,10 +16,13 @@ import (
 
 	"github.com/dghubble/go-twitter/twitter"
 	"github.com/dghubble/oauth1"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/machinebox/graphql"
 )
 
 const layoutISO = "02-01-2006"
+const FANTOM_RPC_URL = "https://rpc.ftm.tools/"
 
 type CollectionData struct {
 	Name    string `json:"name"`
@@ -192,11 +195,27 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 		var boughtAction SaleHistoryItem = salesHistory[len(sale.LastSales)-2]
 		var soldAction SaleHistoryItem = salesHistory[len(sale.LastSales)-1]
 
+		// Web3 Stuff
+		conn, err := ethclient.Dial(FANTOM_RPC_URL)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		contract, err := NewGenericContract(common.HexToAddress(address), conn)
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		var tweetMessage string = ""
 
 		collectionData, err := getCollectionData(address)
 		if err != nil {
-			tweetMessage += fmt.Sprintf("🧾 Collection: %v\n\n", strings.Join(sale.Addresses, ","))
+			name, err := contract.Name(nil)
+			if err != nil {
+				tweetMessage += fmt.Sprintf("🧾 Collection: %v\n\n", strings.Join(sale.Addresses, ","))
+			} else {
+				tweetMessage += fmt.Sprintf("🧾 Collection: %v\n\n", name)
+			}
 		} else {
 			tweetMessage += fmt.Sprintf("🧾 Collection: %s (@%s)\n", collectionData.Name, collectionData.Twitter)
 		}
@@ -229,6 +248,7 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 		tweetMessage += fmt.Sprintf("https://paintswap.finance/marketplace/%v", soldAction.ActionId)
 
 		fmt.Printf("====================\n%v\n====================\n", tweetMessage)
+
 		Tweet(twitterClient, tweetMessage, address, tokenId)
 	}
 }
