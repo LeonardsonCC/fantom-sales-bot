@@ -217,7 +217,7 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 				tweetMessage += fmt.Sprintf("🧾 Collection: %v\n\n", name)
 			}
 		} else {
-			tweetMessage += fmt.Sprintf("🧾 Collection: %s (@%s)\n", collectionData.Name, collectionData.Twitter)
+			tweetMessage += fmt.Sprintf("🧾 Collection: %s (@%s)\n\n", collectionData.Name, collectionData.Twitter)
 		}
 
 		boughtFantomPrice := getPrice("fantom", time.Unix(boughtAction.Time, 0).Format(layoutISO))
