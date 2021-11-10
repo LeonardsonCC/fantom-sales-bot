@@ -21,6 +21,11 @@ import (
 
 const layoutISO = "02-01-2006"
 
+type CollectionData struct {
+	Name    string `json:"name"`
+	Twitter string `json:"twitter"`
+}
+
 type SaleHistoryItem struct {
 	TxHash   string
 	ActionId string
@@ -189,7 +194,12 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 
 		var tweetMessage string = ""
 
-		tweetMessage += fmt.Sprintf("🧾 Contract: %v\n\n", strings.Join(sale.Addresses, ","))
+		collectionData, err := getCollectionData(address)
+		if err != nil {
+			tweetMessage += fmt.Sprintf("🧾 Collection: %v\n\n", strings.Join(sale.Addresses, ","))
+		} else {
+			tweetMessage += fmt.Sprintf("🧾 Collection: %s (@%s)\n", collectionData.Name, collectionData.Twitter)
+		}
 
 		boughtFantomPrice := getPrice("fantom", time.Unix(boughtAction.Time, 0).Format(layoutISO))
 		soldFantomPrice := getPrice("fantom", time.Unix(soldAction.Time, 0).Format(layoutISO))
@@ -239,6 +249,26 @@ func Tweet(twitterClient *twitter.Client, tweetMessage string, address string, t
 		})
 		fmt.Println("tweeting with image")
 	}
+}
+
+func getCollectionData(address string) (*CollectionData, error) {
+	data, err := os.ReadFile("./data/collections.json")
+	if err != nil {
+		return nil, errors.New("error reading collections' file")
+	}
+
+	var allCollectionData interface{}
+	err = json.Unmarshal(data, &allCollectionData)
+	if err != nil || allCollectionData.(map[string]interface{})[address] == nil {
+		return nil, errors.New("error parsing collections file json")
+	}
+
+	var collectionData *CollectionData = &CollectionData{
+		Name:    allCollectionData.(map[string]interface{})[address].(map[string]interface{})["name"].(string),
+		Twitter: allCollectionData.(map[string]interface{})[address].(map[string]interface{})["twitter"].(string),
+	}
+
+	return collectionData, nil
 }
 
 func bigIntToLegibleNumber(bigInt float64) float64 {
