@@ -229,7 +229,7 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 		tweetMessage += fmt.Sprintf("https://paintswap.finance/marketplace/%v", soldAction.ActionId)
 
 		fmt.Printf("====================\n%v\n====================\n", tweetMessage)
-		// Tweet(twitterClient, tweetMessage, address, tokenId)
+		Tweet(twitterClient, tweetMessage, address, tokenId)
 	}
 }
 
