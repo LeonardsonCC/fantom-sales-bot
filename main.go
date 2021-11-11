@@ -177,13 +177,6 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 
 			if oldSale.Version == 1 {
 				oldSale.Token = "paint-swap"
-				brushPrice := getPrice(oldSale.Token, time.Unix(oldSale.Time, 0).Format(layoutISO))
-				fantomPrice := getPrice("fantom", time.Unix(oldSale.Time, 0).Format(layoutISO))
-
-				totalBrushInUsd := oldSale.Value * brushPrice
-				totalFtmValue := totalBrushInUsd / fantomPrice
-
-				oldSale.Value = totalFtmValue
 			} else {
 				oldSale.Token = "fantom"
 			}
@@ -194,6 +187,26 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 
 		var boughtAction SaleHistoryItem = salesHistory[len(sale.LastSales)-2]
 		var soldAction SaleHistoryItem = salesHistory[len(sale.LastSales)-1]
+		if boughtAction.Token == "paint-swap" {
+			brushPrice := getPrice(boughtAction.Token, time.Unix(boughtAction.Time, 0).Format(layoutISO))
+			fantomPrice := getPrice("fantom", time.Unix(boughtAction.Time, 0).Format(layoutISO))
+
+			totalBrushInUsd := boughtAction.Value * brushPrice
+			totalFtmValue := totalBrushInUsd / fantomPrice
+
+			boughtAction.Value = totalFtmValue
+		}
+		if soldAction.Token == "paint-swap" {
+			brushPrice := getPrice(soldAction.Token, time.Unix(soldAction.Time, 0).Format(layoutISO))
+			fantomPrice := getPrice("fantom", time.Unix(soldAction.Time, 0).Format(layoutISO))
+
+			totalBrushInUsd := soldAction.Value * brushPrice
+			totalFtmValue := totalBrushInUsd / fantomPrice
+
+			soldAction.Value = totalFtmValue
+		}
+
+		fmt.Printf("%+v\n%+v\n", boughtAction, soldAction)
 
 		// Web3 Stuff
 		conn, err := ethclient.Dial(FANTOM_RPC_URL)
