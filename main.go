@@ -366,10 +366,14 @@ func getSaleHistory(contractAddress string, tokenId uint, client *graphql.Client
 
 	query := fmt.Sprintf(`
 		query {
-			nfthistories(where: {
-				id_in: [%v]
-				action: "Sold"
-			}) {
+			nfthistories(
+        orderBy: timestamp
+        orderDirection: asc
+        where: {
+					id_in: [%v]
+					action: "Sold"
+				}
+      ) {
 				id
 				numericId
 				actionId
