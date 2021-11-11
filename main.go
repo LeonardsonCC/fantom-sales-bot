@@ -276,11 +276,13 @@ func Tweet(twitterClient *twitter.Client, tweetMessage string, address string, t
 		mediaId, err := uploadImageToTwitter(twitterClient, nftImage)
 		if err != nil {
 			twitterClient.Statuses.Update(tweetMessage, &twitter.StatusUpdateParams{})
+			fmt.Println("tweeted without image")
+		} else {
+			twitterClient.Statuses.Update(tweetMessage, &twitter.StatusUpdateParams{
+				MediaIds: []int64{mediaId},
+			})
+			fmt.Println("tweeted with image")
 		}
-		twitterClient.Statuses.Update(tweetMessage, &twitter.StatusUpdateParams{
-			MediaIds: []int64{mediaId},
-		})
-		fmt.Println("tweeting with image")
 	}
 }
 
