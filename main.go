@@ -24,6 +24,15 @@ import (
 const layoutISO = "02-01-2006"
 const FANTOM_RPC_URL = "https://rpc.ftm.tools/"
 
+type Transaction struct {
+	BlockNumber     string `json:"blockNumber"`
+	Hash            string `json:"hash"`
+	From            string `json:"from"`
+	To              string `json:"to"`
+	Value           string `json:"value"`
+	ContractAddress string `json:"contractAddress"`
+}
+
 type CollectionData struct {
 	Name    string `json:"name"`
 	Twitter string `json:"twitter"`
@@ -150,7 +159,7 @@ func getPrice(token string, dateString string) float64 {
 func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Client, sale interface{}, tokenId string, address string) {
 	intTokenId, _ := strconv.ParseUint(tokenId, 10, 64)
 	history := getSaleHistory(address, uint(intTokenId), client)
-	if len(history.([]interface{})) > 1 {
+	if len(history.([]interface{})) > 0 {
 		endTime, _ := strconv.ParseInt(sale.(map[string]interface{})["timestamp"].(string), 10, 64)
 		price, _ := strconv.ParseFloat(sale.(map[string]interface{})["data"].(string), 64)
 		var sale *Sale = &Sale{
@@ -249,6 +258,15 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 
 		fmt.Printf("====================\n%v\n====================\n", tweetMessage)
 
+		transactions, err := GetContractTxs(address)
+		if err != nil {
+			log.Fatal(err)
+		}
+		for _, tx := range transactions {
+			tx.From = soldAction.TxHash
+		}
+		fmt.Printf("%+v\n", transactions)
+
 		Tweet(twitterClient, tweetMessage, address, tokenId)
 	}
 }
@@ -269,6 +287,28 @@ func Tweet(twitterClient *twitter.Client, tweetMessage string, address string, t
 		})
 		fmt.Println("tweeting with image")
 	}
+}
+
+func GetContractTxs(address string) ([]Transaction, error) {
+	apiKey := os.Getenv("FTMSCAN_API_KEY")
+	resp, err := http.Get(fmt.Sprintf("https://api.ftmscan.com/api?module=account&action=txlist&address=%s&startblock=0&endblock=99999999&sort=asc&apikey=%s", address, apiKey))
+	if err != nil {
+		return nil, err
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	type FtmScanResult struct {
+		Result *[]Transaction `json:"result"`
+	}
+	var result FtmScanResult
+	json.Unmarshal(body, &result)
+
+	var transactions []Transaction = *result.Result
+	return transactions, nil
 }
 
 func getCollectionData(address string) (*CollectionData, error) {
