@@ -95,9 +95,17 @@ type PaintSwapNftResponse struct {
 }
 
 var currentTime time.Time = time.Now()
+var blocklist []string
 
 func main() {
 	fmt.Println("Starting...")
+
+	blocklistLoaded, err := LoadBlocklist()
+	if err != nil {
+		fmt.Println("error loading blocklist")
+		blocklist = []string{}
+	}
+	blocklist = blocklistLoaded
 
 	for {
 		twitterClient := getTwitterConfig()
@@ -262,7 +270,17 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 
 		fmt.Printf("====================\n%v\n====================\n", tweetMessage)
 
-		Tweet(twitterClient, tweetMessage, address, tokenId)
+		var isBlocked bool = false
+		for _, blocklistItem := range blocklist {
+			if blocklistItem == address {
+				isBlocked = true
+			}
+		}
+		if isBlocked {
+			fmt.Printf("Skipping %v\n", address)
+		} else {
+			Tweet(twitterClient, tweetMessage, address, tokenId)
+		}
 	}
 }
 
@@ -284,6 +302,21 @@ func Tweet(twitterClient *twitter.Client, tweetMessage string, address string, t
 			fmt.Println("tweeted with image")
 		}
 	}
+}
+
+func LoadBlocklist() ([]string, error) {
+	data, err := os.ReadFile("./data/blocklist.json")
+	if err != nil {
+		return nil, errors.New("error reading blocks file")
+	}
+
+	var blocklist []string
+	err = json.Unmarshal(data, &blocklist)
+	if err != nil {
+		return nil, errors.New("error parsing blocklist file json")
+	}
+
+	return blocklist, nil
 }
 
 func getCollectionData(address string) (*CollectionData, error) {
