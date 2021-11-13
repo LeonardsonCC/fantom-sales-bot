@@ -240,6 +240,7 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 			oldOwner := saleAction.Seller
 			transactions, _ := GetContractTxs(address)
 			var mintTx Transaction
+			var mintQty int64
 			for _, tx := range transactions {
 				txValue, _ := strconv.ParseFloat(tx.Value, 10)
 				if tx.From == oldOwner && tx.ContractAddress == "" && txValue > 0 {
@@ -269,7 +270,9 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 						}
 						json.Unmarshal(receiptJson, &receiptMap)
 
+						mintQty = 0
 						for _, log := range receiptMap.Logs {
+							mintQty += 1
 							for _, topic := range log.Topics {
 								num, _ := strconv.ParseInt(topic[2:], 16, 64)
 								if strconv.Itoa(int(num)) == tokenId {
@@ -283,6 +286,7 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 			}
 
 			mintValue, _ := strconv.ParseFloat(mintTx.Value, 10)
+			mintValue = mintValue / float64(mintQty)
 			mintTimeStamp, _ := strconv.ParseInt(mintTx.TimeStamp, 10, 64)
 			boughtAction = SaleHistoryItem{
 				TxHash:   mintTx.Hash,
