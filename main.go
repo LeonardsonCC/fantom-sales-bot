@@ -113,9 +113,17 @@ type PaintSwapNftResponse struct {
 }
 
 var currentTime time.Time = time.Now()
+var blocklist []string
 
 func main() {
 	fmt.Println("Starting...")
+
+	blocklistLoaded, err := LoadBlocklist()
+	if err != nil {
+		fmt.Println("error loading blocklist")
+		blocklist = []string{}
+	}
+	blocklist = blocklistLoaded
 
 	for {
 		twitterClient := getTwitterConfig()
@@ -201,13 +209,6 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 
 			if oldSale.Version == 1 {
 				oldSale.Token = "paint-swap"
-				brushPrice := getPrice(oldSale.Token, time.Unix(oldSale.Time, 0).Format(layoutISO))
-				fantomPrice := getPrice("fantom", time.Unix(oldSale.Time, 0).Format(layoutISO))
-
-				totalBrushInUsd := oldSale.Value * brushPrice
-				totalFtmValue := totalBrushInUsd / fantomPrice
-
-				oldSale.Value = totalFtmValue
 			} else {
 				oldSale.Token = "fantom"
 			}
@@ -295,6 +296,25 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 			soldAction = salesHistory[len(sale.LastSales)-1]
 		}
 
+		if boughtAction.Token == "paint-swap" {
+			brushPrice := getPrice(boughtAction.Token, time.Unix(boughtAction.Time, 0).Format(layoutISO))
+			fantomPrice := getPrice("fantom", time.Unix(boughtAction.Time, 0).Format(layoutISO))
+
+			totalBrushInUsd := boughtAction.Value * brushPrice
+			totalFtmValue := totalBrushInUsd / fantomPrice
+
+			boughtAction.Value = totalFtmValue
+		}
+		if soldAction.Token == "paint-swap" {
+			brushPrice := getPrice(soldAction.Token, time.Unix(soldAction.Time, 0).Format(layoutISO))
+			fantomPrice := getPrice("fantom", time.Unix(soldAction.Time, 0).Format(layoutISO))
+
+			totalBrushInUsd := soldAction.Value * brushPrice
+			totalFtmValue := totalBrushInUsd / fantomPrice
+
+			soldAction.Value = totalFtmValue
+		}
+
 		fmt.Printf("%+v\n%+v\n", boughtAction, soldAction)
 
 		var tweetMessage string = ""
@@ -340,7 +360,17 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 
 		fmt.Printf("====================\n%v\n====================\n", tweetMessage)
 
-		Tweet(twitterClient, tweetMessage, address, tokenId)
+		var isBlocked bool = false
+		for _, blocklistItem := range blocklist {
+			if blocklistItem == address {
+				isBlocked = true
+			}
+		}
+		if isBlocked {
+			fmt.Printf("Skipping %v\n", address)
+		} else {
+			Tweet(twitterClient, tweetMessage, address, tokenId)
+		}
 	}
 }
 
@@ -354,11 +384,13 @@ func Tweet(twitterClient *twitter.Client, tweetMessage string, address string, t
 		mediaId, err := uploadImageToTwitter(twitterClient, nftImage)
 		if err != nil {
 			twitterClient.Statuses.Update(tweetMessage, &twitter.StatusUpdateParams{})
+			fmt.Println("tweeted without image")
+		} else {
+			twitterClient.Statuses.Update(tweetMessage, &twitter.StatusUpdateParams{
+				MediaIds: []int64{mediaId},
+			})
+			fmt.Println("tweeted with image")
 		}
-		twitterClient.Statuses.Update(tweetMessage, &twitter.StatusUpdateParams{
-			MediaIds: []int64{mediaId},
-		})
-		fmt.Println("tweeting with image")
 	}
 }
 
@@ -382,6 +414,21 @@ func GetContractTxs(address string) ([]Transaction, error) {
 
 	var transactions []Transaction = *result.Result
 	return transactions, nil
+}
+
+func LoadBlocklist() ([]string, error) {
+	data, err := os.ReadFile("./data/blocklist.json")
+	if err != nil {
+		return nil, errors.New("error reading blocks file")
+	}
+
+	var blocklist []string
+	err = json.Unmarshal(data, &blocklist)
+	if err != nil {
+		return nil, errors.New("error parsing blocklist file json")
+	}
+
+	return blocklist, nil
 }
 
 func getCollectionData(address string) (*CollectionData, error) {
@@ -502,10 +549,14 @@ func getSaleHistory(contractAddress string, tokenId uint, client *graphql.Client
 
 	query := fmt.Sprintf(`
 		query {
-			nfthistories(where: {
-				id_in: [%v]
-				action: "Sold"
-			}) {
+			nfthistories(
+        orderBy: timestamp
+        orderDirection: asc
+        where: {
+					id_in: [%v]
+					action: "Sold"
+				}
+      ) {
 				id
 				numericId
 				actionId
