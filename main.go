@@ -31,6 +31,7 @@ type Transaction struct {
 	To              string `json:"to"`
 	Value           string `json:"value"`
 	ContractAddress string `json:"contractAddress"`
+	TimeStamp       string `json:"timeStamp"`
 }
 
 type CollectionData struct {
@@ -57,6 +58,14 @@ func (a SalesHistory) Swap(i, j int64) {
 }
 func (a SalesHistory) Less(i, j int64) bool {
 	return a[i].Time < a[j].Time
+}
+
+type SaleAction struct {
+	Id        string
+	Address   string
+	NftId     string
+	Seller    string
+	MaxBidder string
 }
 
 type Sale struct {
@@ -157,6 +166,12 @@ func getPrice(token string, dateString string) float64 {
 }
 
 func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Client, sale interface{}, tokenId string, address string) {
+	// Web3 Stuff
+	conn, err := ethclient.Dial(FANTOM_RPC_URL)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	intTokenId, _ := strconv.ParseUint(tokenId, 10, 64)
 	history := getSaleHistory(address, uint(intTokenId), client)
 	if len(history.([]interface{})) > 0 {
@@ -201,14 +216,43 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 		}
 		sale.LastSales = salesHistory
 
-		var boughtAction SaleHistoryItem = salesHistory[len(sale.LastSales)-2]
-		var soldAction SaleHistoryItem = salesHistory[len(sale.LastSales)-1]
+		var boughtAction SaleHistoryItem
+		var soldAction SaleHistoryItem
+		if len(history.([]interface{})) > 1 {
+			boughtAction = salesHistory[len(sale.LastSales)-2]
+			soldAction = salesHistory[len(sale.LastSales)-1]
+		} else {
+			saleAction, err := GetSaleAction(client, address, tokenId)
+			if err != nil {
+				log.Fatal(err)
+			}
 
-		// Web3 Stuff
-		conn, err := ethclient.Dial(FANTOM_RPC_URL)
-		if err != nil {
-			log.Fatal(err)
+			oldOwner := saleAction.Seller
+			transactions, _ := GetContractTxs(address)
+			var mintTx Transaction
+			for _, tx := range transactions {
+				txValue, _ := strconv.ParseFloat(tx.Value, 10)
+				mintValue, _ := strconv.ParseFloat(mintTx.Value, 10)
+				if tx.From == oldOwner && tx.ContractAddress == "" && txValue > mintValue {
+					mintTx = tx
+				}
+			}
+
+			mintValue, _ := strconv.ParseFloat(mintTx.Value, 10)
+			mintTimeStamp, _ := strconv.ParseInt(mintTx.TimeStamp, 10, 64)
+			boughtAction = SaleHistoryItem{
+				TxHash:   mintTx.Hash,
+				ActionId: "0",
+				Time:     mintTimeStamp,
+				Value:    bigIntToLegibleNumber(mintValue),
+				Token:    "fantom",
+				Version:  2,
+			}
+
+			soldAction = salesHistory[len(sale.LastSales)-1]
 		}
+
+		fmt.Printf("%+v\n%+v\n", boughtAction, soldAction)
 
 		contract, err := NewGenericContract(common.HexToAddress(address), conn)
 		if err != nil {
@@ -257,15 +301,6 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 		tweetMessage += fmt.Sprintf("https://paintswap.finance/marketplace/%v", soldAction.ActionId)
 
 		fmt.Printf("====================\n%v\n====================\n", tweetMessage)
-
-		transactions, err := GetContractTxs(address)
-		if err != nil {
-			log.Fatal(err)
-		}
-		for _, tx := range transactions {
-			tx.From = soldAction.TxHash
-		}
-		fmt.Printf("%+v\n", transactions)
 
 		Tweet(twitterClient, tweetMessage, address, tokenId)
 	}
@@ -380,6 +415,45 @@ func getNftImageUrl(contractAddress string, tokenId string) string {
 	json.Unmarshal(body, &response)
 
 	return response.Nft.Uri
+}
+
+func GetSaleAction(client *graphql.Client, address string, tokenId string) (*SaleAction, error) {
+	query := fmt.Sprintf(`
+		query {
+			sales(
+				first: 1
+				where: {
+					nftIds_contains: ["%s"]
+				}
+			) {
+				id
+				addresses
+				nftIds
+				seller
+				maxBidder
+			}
+		}
+	`, fmt.Sprintf("%s_%s", address, tokenId))
+	fmt.Println(query)
+
+	req := graphql.NewRequest(query)
+	ctx := context.Background()
+
+	var response map[string]interface{}
+
+	if err := client.Run(ctx, req, &response); err != nil {
+		return nil, err
+	}
+
+	var sale *SaleAction = &SaleAction{
+		Id:        response["sales"].([]interface{})[0].(map[string]interface{})["id"].(string),
+		Address:   response["sales"].([]interface{})[0].(map[string]interface{})["addresses"].([]interface{})[0].(string),
+		NftId:     response["sales"].([]interface{})[0].(map[string]interface{})["nftIds"].([]interface{})[0].(string),
+		Seller:    response["sales"].([]interface{})[0].(map[string]interface{})["seller"].(string),
+		MaxBidder: response["sales"].([]interface{})[0].(map[string]interface{})["maxBidder"].(string),
+	}
+
+	return sale, nil
 }
 
 func getSaleHistory(contractAddress string, tokenId uint, client *graphql.Client) interface{} {
