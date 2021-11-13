@@ -302,6 +302,11 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 				Version:  2,
 			}
 
+			if math.IsNaN(boughtAction.Value) {
+				fmt.Printf("Contract skipped because value NaN: %s\n", address)
+				return
+			}
+
 			soldAction = salesHistory[len(sale.LastSales)-1]
 		}
 
