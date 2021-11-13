@@ -216,6 +216,11 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 		}
 		sale.LastSales = salesHistory
 
+		contract, err := NewGenericContract(common.HexToAddress(address), conn)
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		var boughtAction SaleHistoryItem
 		var soldAction SaleHistoryItem
 		if len(history.([]interface{})) > 1 {
@@ -224,7 +229,8 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 		} else {
 			saleAction, err := GetSaleAction(client, address, tokenId)
 			if err != nil {
-				log.Fatal(err)
+				fmt.Println(err)
+				return
 			}
 
 			oldOwner := saleAction.Seller
@@ -232,9 +238,43 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 			var mintTx Transaction
 			for _, tx := range transactions {
 				txValue, _ := strconv.ParseFloat(tx.Value, 10)
-				mintValue, _ := strconv.ParseFloat(mintTx.Value, 10)
-				if tx.From == oldOwner && tx.ContractAddress == "" && txValue > mintValue {
-					mintTx = tx
+				if tx.From == oldOwner && tx.ContractAddress == "" && txValue > 0 {
+					txWeb3, isPending, err := conn.TransactionByHash(context.Background(), common.HexToHash(tx.Hash))
+					if err != nil {
+						fmt.Println(err)
+						return
+					}
+
+					if !isPending {
+						receipt, err := conn.TransactionReceipt(context.Background(), txWeb3.Hash())
+						if err != nil {
+							fmt.Println(err)
+							return
+						}
+
+						receiptJson, err := receipt.MarshalJSON()
+						if err != nil {
+							fmt.Println(err)
+							break
+						}
+
+						var receiptMap struct {
+							Logs []struct {
+								Topics []string `json:"topics"`
+							}
+						}
+						json.Unmarshal(receiptJson, &receiptMap)
+
+						for _, log := range receiptMap.Logs {
+							for _, topic := range log.Topics {
+								num, _ := strconv.ParseInt(topic[2:], 16, 64)
+								if strconv.Itoa(int(num)) == tokenId {
+									mintTx = tx
+									break
+								}
+							}
+						}
+					}
 				}
 			}
 
@@ -253,11 +293,6 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 		}
 
 		fmt.Printf("%+v\n%+v\n", boughtAction, soldAction)
-
-		contract, err := NewGenericContract(common.HexToAddress(address), conn)
-		if err != nil {
-			log.Fatal(err)
-		}
 
 		var tweetMessage string = ""
 
@@ -434,7 +469,6 @@ func GetSaleAction(client *graphql.Client, address string, tokenId string) (*Sal
 			}
 		}
 	`, fmt.Sprintf("%s_%s", address, tokenId))
-	fmt.Println(query)
 
 	req := graphql.NewRequest(query)
 	ctx := context.Background()
