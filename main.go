@@ -241,9 +241,10 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 			transactions, _ := GetContractTxs(address)
 			var mintTx Transaction
 			var mintQty int64
+			var foundIt bool = false
 			for _, tx := range transactions {
 				txValue, _ := strconv.ParseFloat(tx.Value, 10)
-				if tx.From == oldOwner && tx.ContractAddress == "" && txValue > 0 {
+				if !foundIt && tx.From == oldOwner && tx.ContractAddress == "" && txValue > 0 {
 					txWeb3, isPending, err := conn.TransactionByHash(context.Background(), common.HexToHash(tx.Hash))
 					if err != nil {
 						fmt.Println(err)
@@ -272,12 +273,16 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 
 						mintQty = 0
 						for _, log := range receiptMap.Logs {
-							mintQty += 1
-							for _, topic := range log.Topics {
-								num, _ := strconv.ParseInt(topic[2:], 16, 64)
-								if strconv.Itoa(int(num)) == tokenId {
-									mintTx = tx
-									break
+							if len(log.Topics) == 4 { // need 4 topics to make a transfer of ERC721
+								mintQty = 1 + mintQty
+								for _, topic := range log.Topics {
+									num, _ := strconv.ParseInt(topic[2:], 16, 64)
+									if strconv.Itoa(int(num)) == tokenId {
+										mintTx = tx
+										fmt.Println(tx)
+										foundIt = true
+										break
+									}
 								}
 							}
 						}
