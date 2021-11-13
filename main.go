@@ -223,10 +223,13 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 
 		var boughtAction SaleHistoryItem
 		var soldAction SaleHistoryItem
+		var boughtOrMinted string
 		if len(history.([]interface{})) > 1 {
+			boughtOrMinted = "Bought"
 			boughtAction = salesHistory[len(sale.LastSales)-2]
 			soldAction = salesHistory[len(sale.LastSales)-1]
 		} else {
+			boughtOrMinted = "Minted"
 			saleAction, err := GetSaleAction(client, address, tokenId)
 			if err != nil {
 				fmt.Println(err)
@@ -311,7 +314,7 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 		boughtFantomPrice := getPrice("fantom", time.Unix(boughtAction.Time, 0).Format(layoutISO))
 		soldFantomPrice := getPrice("fantom", time.Unix(soldAction.Time, 0).Format(layoutISO))
 
-		tweetMessage += fmt.Sprintf("🛍 Bought: %.2f FTM @ $%.2f\n", boughtAction.Value, boughtFantomPrice)
+		tweetMessage += fmt.Sprintf("🛍 %s: %.2f FTM @ $%.2f\n", boughtOrMinted, boughtAction.Value, boughtFantomPrice)
 		tweetMessage += fmt.Sprintf("💰 Sold: %.2f FTM @ $%.2f\n", soldAction.Value, soldFantomPrice)
 
 		boughtAt := boughtAction.Value
