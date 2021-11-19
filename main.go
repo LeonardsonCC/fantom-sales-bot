@@ -24,6 +24,16 @@ import (
 const layoutISO = "02-01-2006"
 const FANTOM_RPC_URL = "https://rpc.ftm.tools/"
 
+type Transaction struct {
+	BlockNumber     string `json:"blockNumber"`
+	Hash            string `json:"hash"`
+	From            string `json:"from"`
+	To              string `json:"to"`
+	Value           string `json:"value"`
+	ContractAddress string `json:"contractAddress"`
+	TimeStamp       string `json:"timeStamp"`
+}
+
 type CollectionData struct {
 	Name    string `json:"name"`
 	Twitter string `json:"twitter"`
@@ -48,6 +58,14 @@ func (a SalesHistory) Swap(i, j int64) {
 }
 func (a SalesHistory) Less(i, j int64) bool {
 	return a[i].Time < a[j].Time
+}
+
+type SaleAction struct {
+	Id        string
+	Address   string
+	NftId     string
+	Seller    string
+	MaxBidder string
 }
 
 type Sale struct {
@@ -156,9 +174,15 @@ func getPrice(token string, dateString string) float64 {
 }
 
 func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Client, sale interface{}, tokenId string, address string) {
+	// Web3 Stuff
+	conn, err := ethclient.Dial(FANTOM_RPC_URL)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	intTokenId, _ := strconv.ParseUint(tokenId, 10, 64)
 	history := getSaleHistory(address, uint(intTokenId), client)
-	if len(history.([]interface{})) > 1 {
+	if len(history.([]interface{})) > 0 {
 		endTime, _ := strconv.ParseInt(sale.(map[string]interface{})["timestamp"].(string), 10, 64)
 		price, _ := strconv.ParseFloat(sale.(map[string]interface{})["data"].(string), 64)
 		var sale *Sale = &Sale{
@@ -193,8 +217,98 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 		}
 		sale.LastSales = salesHistory
 
-		var boughtAction SaleHistoryItem = salesHistory[len(sale.LastSales)-2]
-		var soldAction SaleHistoryItem = salesHistory[len(sale.LastSales)-1]
+		contract, err := NewGenericContract(common.HexToAddress(address), conn)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		var boughtAction SaleHistoryItem
+		var soldAction SaleHistoryItem
+		var boughtOrMinted string
+		if len(history.([]interface{})) > 1 {
+			boughtOrMinted = "Bought"
+			boughtAction = salesHistory[len(sale.LastSales)-2]
+			soldAction = salesHistory[len(sale.LastSales)-1]
+		} else {
+			boughtOrMinted = "Minted"
+			saleAction, err := GetSaleAction(client, address, tokenId)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+
+			oldOwner := saleAction.Seller
+			transactions, _ := GetContractTxs(address)
+			var mintTx Transaction
+			var mintQty int64
+			var foundIt bool = false
+			for _, tx := range transactions {
+				txValue, _ := strconv.ParseFloat(tx.Value, 10)
+				if !foundIt && tx.From == oldOwner && tx.ContractAddress == "" && txValue > 0 {
+					txWeb3, isPending, err := conn.TransactionByHash(context.Background(), common.HexToHash(tx.Hash))
+					if err != nil {
+						fmt.Println(err)
+						return
+					}
+
+					if !isPending {
+						receipt, err := conn.TransactionReceipt(context.Background(), txWeb3.Hash())
+						if err != nil {
+							fmt.Println(err)
+							return
+						}
+
+						receiptJson, err := receipt.MarshalJSON()
+						if err != nil {
+							fmt.Println(err)
+							break
+						}
+
+						var receiptMap struct {
+							Logs []struct {
+								Topics []string `json:"topics"`
+							}
+						}
+						json.Unmarshal(receiptJson, &receiptMap)
+
+						mintQty = 0
+						for _, log := range receiptMap.Logs {
+							if len(log.Topics) == 4 { // need 4 topics to make a transfer of ERC721
+								mintQty = 1 + mintQty
+								for _, topic := range log.Topics {
+									num, _ := strconv.ParseInt(topic[2:], 16, 64)
+									if strconv.Itoa(int(num)) == tokenId {
+										mintTx = tx
+										fmt.Println(tx)
+										foundIt = true
+										break
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+
+			mintValue, _ := strconv.ParseFloat(mintTx.Value, 10)
+			mintValue = mintValue / float64(mintQty)
+			mintTimeStamp, _ := strconv.ParseInt(mintTx.TimeStamp, 10, 64)
+			boughtAction = SaleHistoryItem{
+				TxHash:   mintTx.Hash,
+				ActionId: "0",
+				Time:     mintTimeStamp,
+				Value:    bigIntToLegibleNumber(mintValue),
+				Token:    "fantom",
+				Version:  2,
+			}
+
+			soldAction = salesHistory[len(sale.LastSales)-1]
+			if math.IsNaN(boughtAction.Value) || boughtAction.Time == 0 {
+				fmt.Printf("Contract skipped because some error in values: %+v\n", boughtAction)
+				return
+			}
+		}
+
 		if boughtAction.Token == "paint-swap" {
 			brushPrice := getPrice(boughtAction.Token, time.Unix(boughtAction.Time, 0).Format(layoutISO))
 			fantomPrice := getPrice("fantom", time.Unix(boughtAction.Time, 0).Format(layoutISO))
@@ -216,17 +330,6 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 
 		fmt.Printf("%+v\n%+v\n", boughtAction, soldAction)
 
-		// Web3 Stuff
-		conn, err := ethclient.Dial(FANTOM_RPC_URL)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		contract, err := NewGenericContract(common.HexToAddress(address), conn)
-		if err != nil {
-			log.Fatal(err)
-		}
-
 		var tweetMessage string = ""
 
 		collectionData, err := getCollectionData(address)
@@ -244,7 +347,7 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 		boughtFantomPrice := getPrice("fantom", time.Unix(boughtAction.Time, 0).Format(layoutISO))
 		soldFantomPrice := getPrice("fantom", time.Unix(soldAction.Time, 0).Format(layoutISO))
 
-		tweetMessage += fmt.Sprintf("🛍 Bought: %.2f FTM @ $%.2f\n", boughtAction.Value, boughtFantomPrice)
+		tweetMessage += fmt.Sprintf("🛍 %s: %.2f FTM @ $%.2f\n", boughtOrMinted, boughtAction.Value, boughtFantomPrice)
 		tweetMessage += fmt.Sprintf("💰 Sold: %.2f FTM @ $%.2f\n", soldAction.Value, soldFantomPrice)
 
 		boughtAt := boughtAction.Value
@@ -302,6 +405,28 @@ func Tweet(twitterClient *twitter.Client, tweetMessage string, address string, t
 			fmt.Println("tweeted with image")
 		}
 	}
+}
+
+func GetContractTxs(address string) ([]Transaction, error) {
+	apiKey := os.Getenv("FTMSCAN_API_KEY")
+	resp, err := http.Get(fmt.Sprintf("https://api.ftmscan.com/api?module=account&action=txlist&address=%s&startblock=0&endblock=99999999&sort=asc&apikey=%s", address, apiKey))
+	if err != nil {
+		return nil, err
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	type FtmScanResult struct {
+		Result *[]Transaction `json:"result"`
+	}
+	var result FtmScanResult
+	json.Unmarshal(body, &result)
+
+	var transactions []Transaction = *result.Result
+	return transactions, nil
 }
 
 func LoadBlocklist() ([]string, error) {
@@ -388,6 +513,44 @@ func getNftImageUrl(contractAddress string, tokenId string) string {
 	json.Unmarshal(body, &response)
 
 	return response.Nft.Uri
+}
+
+func GetSaleAction(client *graphql.Client, address string, tokenId string) (*SaleAction, error) {
+	query := fmt.Sprintf(`
+		query {
+			sales(
+				first: 1
+				where: {
+					nftIds_contains: ["%s"]
+				}
+			) {
+				id
+				addresses
+				nftIds
+				seller
+				maxBidder
+			}
+		}
+	`, fmt.Sprintf("%s_%s", address, tokenId))
+
+	req := graphql.NewRequest(query)
+	ctx := context.Background()
+
+	var response map[string]interface{}
+
+	if err := client.Run(ctx, req, &response); err != nil {
+		return nil, err
+	}
+
+	var sale *SaleAction = &SaleAction{
+		Id:        response["sales"].([]interface{})[0].(map[string]interface{})["id"].(string),
+		Address:   response["sales"].([]interface{})[0].(map[string]interface{})["addresses"].([]interface{})[0].(string),
+		NftId:     response["sales"].([]interface{})[0].(map[string]interface{})["nftIds"].([]interface{})[0].(string),
+		Seller:    response["sales"].([]interface{})[0].(map[string]interface{})["seller"].(string),
+		MaxBidder: response["sales"].([]interface{})[0].(map[string]interface{})["maxBidder"].(string),
+	}
+
+	return sale, nil
 }
 
 func getSaleHistory(contractAddress string, tokenId uint, client *graphql.Client) interface{} {
