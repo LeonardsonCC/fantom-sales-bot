@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"math"
 	"net/http"
 	"os"
@@ -130,7 +129,11 @@ func main() {
 
 		client := graphql.NewClient("https://api.thegraph.com/subgraphs/name/paint-swap-finance/nftsv2")
 
-		recentSales := getRecentSales(client)
+		recentSales, err := getRecentSales(client)
+		if err != nil {
+			fmt.Println("error getting recent sales")
+			continue
+		}
 		for _, sale := range recentSales.([]interface{}) {
 			address := sale.(map[string]interface{})["id"].(string)
 			splittedAddres := strings.Split(address, "_")
@@ -147,18 +150,18 @@ func main() {
 	}
 }
 
-func getPrice(token string, dateString string) float64 {
+func getPrice(token string, dateString string) (float64, error) {
 	t, _ := time.Parse(layoutISO, dateString)
 	validatedTime := t.Format(layoutISO)
 
 	resp, err := http.Get(fmt.Sprintf("https://api.coingecko.com/api/v3/coins/%s/history?date=%v", token, validatedTime))
 	if err != nil {
-		log.Fatal(err)
+		return 0, err
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatalln(err)
+		return 0, err
 	}
 
 	var response FantomPriceResponse
@@ -170,18 +173,23 @@ func getPrice(token string, dateString string) float64 {
 		return getPrice(token, dateString)
 	}
 
-	return response.MarketData.CurrentPrice.Usd
+	return response.MarketData.CurrentPrice.Usd, nil
 }
 
 func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Client, sale interface{}, tokenId string, address string) {
 	// Web3 Stuff
 	conn, err := ethclient.Dial(FANTOM_RPC_URL)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("Error connecting to Fantom RPC")
+		return
 	}
 
 	intTokenId, _ := strconv.ParseUint(tokenId, 10, 64)
-	history := getSaleHistory(address, uint(intTokenId), client)
+	history, err := getSaleHistory(address, uint(intTokenId), client)
+	if err != nil {
+		fmt.Println("Error getting sale history")
+		return
+	}
 	if len(history.([]interface{})) > 0 {
 		endTime, _ := strconv.ParseInt(sale.(map[string]interface{})["timestamp"].(string), 10, 64)
 		price, _ := strconv.ParseFloat(sale.(map[string]interface{})["data"].(string), 64)
@@ -219,7 +227,8 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 
 		contract, err := NewGenericContract(common.HexToAddress(address), conn)
 		if err != nil {
-			log.Fatal(err)
+			fmt.Println(err)
+			return
 		}
 
 		var boughtAction SaleHistoryItem
@@ -310,8 +319,17 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 		}
 
 		if boughtAction.Token == "paint-swap" {
-			brushPrice := getPrice(boughtAction.Token, time.Unix(boughtAction.Time, 0).Format(layoutISO))
-			fantomPrice := getPrice("fantom", time.Unix(boughtAction.Time, 0).Format(layoutISO))
+			brushPrice, err := getPrice(boughtAction.Token, time.Unix(boughtAction.Time, 0).Format(layoutISO))
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+
+			fantomPrice, err := getPrice("fantom", time.Unix(boughtAction.Time, 0).Format(layoutISO))
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
 
 			totalBrushInUsd := boughtAction.Value * brushPrice
 			totalFtmValue := totalBrushInUsd / fantomPrice
@@ -319,8 +337,17 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 			boughtAction.Value = totalFtmValue
 		}
 		if soldAction.Token == "paint-swap" {
-			brushPrice := getPrice(soldAction.Token, time.Unix(soldAction.Time, 0).Format(layoutISO))
-			fantomPrice := getPrice("fantom", time.Unix(soldAction.Time, 0).Format(layoutISO))
+			brushPrice, err := getPrice(soldAction.Token, time.Unix(soldAction.Time, 0).Format(layoutISO))
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+
+			fantomPrice, err := getPrice("fantom", time.Unix(soldAction.Time, 0).Format(layoutISO))
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
 
 			totalBrushInUsd := soldAction.Value * brushPrice
 			totalFtmValue := totalBrushInUsd / fantomPrice
@@ -344,8 +371,17 @@ func fetchSaleHistoryAndTweet(twitterClient *twitter.Client, client *graphql.Cli
 			tweetMessage += fmt.Sprintf("🧾 Collection: %s (@%s)\n\n", collectionData.Name, collectionData.Twitter)
 		}
 
-		boughtFantomPrice := getPrice("fantom", time.Unix(boughtAction.Time, 0).Format(layoutISO))
-		soldFantomPrice := getPrice("fantom", time.Unix(soldAction.Time, 0).Format(layoutISO))
+		boughtFantomPrice, err := getPrice("fantom", time.Unix(boughtAction.Time, 0).Format(layoutISO))
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		soldFantomPrice, err := getPrice("fantom", time.Unix(soldAction.Time, 0).Format(layoutISO))
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
 
 		tweetMessage += fmt.Sprintf("🛍 %s: %.2f FTM @ $%.2f\n", boughtOrMinted, boughtAction.Value, boughtFantomPrice)
 		tweetMessage += fmt.Sprintf("💰 Sold: %.2f FTM @ $%.2f\n", soldAction.Value, soldFantomPrice)
@@ -473,7 +509,11 @@ func clearNftUrl(url string) string {
 }
 
 func getNftImage(contractAddress string, tokenId string) (string, error) {
-	var nftUrl string = clearNftUrl(getNftImageUrl(contractAddress, tokenId))
+	nftUrl, err := getNftImageUrl(contractAddress, tokenId)
+	if err != nil {
+		return "", err
+	}
+	nftUrl = clearNftUrl(nftUrl)
 	if !strings.HasPrefix(nftUrl, "https://") {
 		return "", fmt.Errorf("invalid nft url: %v", nftUrl)
 	}
@@ -498,21 +538,21 @@ func getNftImage(contractAddress string, tokenId string) (string, error) {
 	return response.Image, nil
 }
 
-func getNftImageUrl(contractAddress string, tokenId string) string {
+func getNftImageUrl(contractAddress string, tokenId string) (string, error) {
 	resp, err := http.Get(fmt.Sprintf("https://api.paintswap.finance/nft/%v/%v?allowNSFW=true&numToFetch=10", contractAddress, tokenId))
 	if err != nil {
-		log.Fatal(err)
+		return "", err
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatalln(err)
+		return "", err
 	}
 
 	var response PaintSwapNftResponse
 	json.Unmarshal(body, &response)
 
-	return response.Nft.Uri
+	return response.Nft.Uri, nil
 }
 
 func GetSaleAction(client *graphql.Client, address string, tokenId string) (*SaleAction, error) {
@@ -553,7 +593,7 @@ func GetSaleAction(client *graphql.Client, address string, tokenId string) (*Sal
 	return sale, nil
 }
 
-func getSaleHistory(contractAddress string, tokenId uint, client *graphql.Client) interface{} {
+func getSaleHistory(contractAddress string, tokenId uint, client *graphql.Client) (interface{}, error) {
 	commonIndexes := make([]uint, 40)
 	var idsToSearch []string
 	for i := range commonIndexes {
@@ -588,13 +628,13 @@ func getSaleHistory(contractAddress string, tokenId uint, client *graphql.Client
 	var response map[string]interface{}
 
 	if err := client.Run(ctx, req, &response); err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
-	return response["nfthistories"]
+	return response["nfthistories"], nil
 }
 
-func getRecentSales(client *graphql.Client) interface{} {
+func getRecentSales(client *graphql.Client) (interface{}, error) {
 	currentTime = currentTime.Add(-(time.Minute * time.Duration(5)))
 
 	query := fmt.Sprintf(`
@@ -621,10 +661,10 @@ func getRecentSales(client *graphql.Client) interface{} {
 	var response map[string]interface{}
 
 	if err := client.Run(ctx, req, &response); err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
-	return response["nfthistories"]
+	return response["nfthistories"], nil
 }
 
 func uploadImageToTwitter(twitterClient *twitter.Client, nftUrl string) (int64, error) {
