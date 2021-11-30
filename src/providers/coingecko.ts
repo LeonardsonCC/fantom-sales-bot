@@ -9,7 +9,7 @@ interface CoinGeckoResponse {
 }
 
 const fetchPrice = async (
-  coin: string,
+  coin: "fantom" | "paint-swap",
   timestamp: number
 ): Promise<CoinGeckoResponse> => {
   const time = new Date(timestamp); // idk why but it works

@@ -5,6 +5,7 @@ import { fetchPrice } from "./providers/coingecko";
 import { fetchContractTx } from "./providers/ftmscan";
 import { fetchContractName } from "./providers/generic-contract";
 import { fetchItemHistory, HistoryItem } from "./providers/ps-api";
+import { bigNumberToSimpleNumber } from "./utils/price";
 
 const onSold = async (
   sale: Sold,
@@ -35,8 +36,10 @@ const onSold = async (
     });
 
   let lastSale: null | HistoryItem = null;
+  let mintedOrBought: "Minted" | "Bought";
   if (history.length > 1) {
     lastSale = history.slice(-1)[0];
+    mintedOrBought = "Bought";
   } else {
     const txs = await fetchContractTx(sale.collection);
     const sellerTxs = txs.filter((tx) => {
@@ -78,15 +81,13 @@ const onSold = async (
         }
       }
     }
-    console.log("finished", sale, lastSale);
+    mintedOrBought = "Minted";
   }
 
+  let salePrice, lastSalePrice;
   try {
-    const {
-      market_data: {
-        current_price: { usd: salePrice },
-      },
-    } = await fetchPrice("fantom", timestamp);
+    const result = await fetchPrice("fantom", timestamp);
+    salePrice = result.market_data.current_price.usd;
   } catch (e) {
     // TODO make it retry after some seconds
     console.error(e);
@@ -96,11 +97,8 @@ const onSold = async (
     try {
       if (lastSale.timestamp.length === 10)
         lastSale.timestamp = `${lastSale.timestamp}000`;
-      const {
-        market_data: {
-          current_price: { usd: lastSalePrice },
-        },
-      } = await fetchPrice("fantom", Number(lastSale.timestamp));
+      const result = await fetchPrice("fantom", Number(lastSale.timestamp));
+      lastSalePrice = result.market_data.current_price.usd;
     } catch (err) {
       // TODO make it retry after some seconds
       console.error(err);
@@ -108,6 +106,56 @@ const onSold = async (
   }
 
   const collectionName = await fetchContractName(provider, sale.collection);
+
+  if (lastSale !== null && lastSalePrice && salePrice) {
+    const roundValue = (value: number) => value.toFixed(3);
+
+    let tweetMessage = "";
+    tweetMessage += `🧾 Collection: ${collectionName}\n\n`;
+    tweetMessage += `🛍 ${mintedOrBought}: ${roundValue(
+      Number(ethers.utils.formatUnits(lastSale.data, 19))
+    )} FTM @ $${roundValue(lastSalePrice)}\n`;
+    tweetMessage += `💰 Sold: ${roundValue(
+      Number(ethers.utils.formatUnits(sale.priceTotal))
+    )} FTM @ $${salePrice.toFixed(3)}\n`;
+
+    const saleTime = new Date(timestamp);
+    const lastSaleTime = new Date(Number(lastSale.timestamp));
+
+    tweetMessage += `\n🤝 HODL: ${Math.floor(
+      (saleTime.getTime() - lastSaleTime.getTime()) / (1000 * 60 * 60 * 24)
+    )} days\n`;
+
+    const diff =
+      bigNumberToSimpleNumber(sale.priceTotal) -
+      bigNumberToSimpleNumber(BigNumber.from(lastSale.data), 19);
+    if (diff >= 0) {
+      tweetMessage += `📈 Gain: ${roundValue(diff)} FTM\n`;
+    } else {
+      tweetMessage += `📉 Loss: ${roundValue(diff)} FTM\n`;
+    }
+
+    const saleUsd = bigNumberToSimpleNumber(sale.priceTotal) * salePrice;
+    const lastSaleUsd =
+      bigNumberToSimpleNumber(BigNumber.from(lastSale.data), 19) *
+      lastSalePrice;
+    const diffUsd = saleUsd - lastSaleUsd;
+    const percentDiffUsd = (diffUsd / lastSaleUsd) * 100;
+    if (diffUsd >= 0) {
+      tweetMessage += `💵 Profit: $${roundValue(
+        diffUsd
+      )} (📈 ${percentDiffUsd.toFixed(2)}%)\n`;
+    } else {
+      tweetMessage += `💵 Loss: $${roundValue(
+        diffUsd
+      )} (📉 ${percentDiffUsd.toFixed(2)}%)\n`;
+    }
+
+    tweetMessage += `https://paintswap.finance/marketplace/${sale.marketplaceId}`;
+    console.log(tweetMessage);
+  } else {
+    console.log("No last sale");
+  }
 };
 
 export default onSold;
