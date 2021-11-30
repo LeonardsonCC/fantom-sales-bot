@@ -1,5 +1,5 @@
 import { Sold } from "@paintswap/marketplace-interactions";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import { ethers, BigNumber } from "ethers";
 import { fetchPrice } from "./providers/coingecko";
 import { fetchContractTx } from "./providers/ftmscan";
@@ -78,7 +78,6 @@ const onSold = async (
       }
     }
     if (mintTx) {
-      console.log("mintvalue", BigNumber.from(mintTx.value));
       lastSale = {
         action: "0",
         actionId: "0",
@@ -99,7 +98,7 @@ const onSold = async (
     salePrice = result.market_data.current_price.usd;
   } catch (e) {
     // TODO make it retry after some seconds
-    console.error(e);
+    console.error("Error trying to fetch sale price", e);
   }
 
   if (lastSale) {
@@ -110,7 +109,7 @@ const onSold = async (
       lastSalePrice = result.market_data.current_price.usd;
     } catch (err) {
       // TODO make it retry after some seconds
-      console.error(err);
+      console.error("Error trying to fetch last sale price", err);
     }
   }
 
@@ -141,7 +140,7 @@ const onSold = async (
     if (diff >= 0) {
       tweetMessage += `📈 Gain: ${roundValue(diff)} FTM\n`;
     } else {
-      tweetMessage += `📉 Loss: ${roundValue(diff)} FTM\n`;
+      tweetMessage += `📉 Loss: ${roundValue(diff * -1)} FTM\n`;
     }
 
     const saleUsd = bigNumberToSimpleNumber(sale.priceTotal) * salePrice;
@@ -156,7 +155,7 @@ const onSold = async (
       )} (📈 ${percentDiffUsd.toFixed(2)}%)\n`;
     } else {
       tweetMessage += `💵 Loss: $${roundValue(
-        diffUsd
+        diffUsd * -1
       )} (📉 ${percentDiffUsd.toFixed(2)}%)\n`;
     }
 
