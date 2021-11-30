@@ -12,15 +12,17 @@ const fetchPrice = async (
   coin: string,
   timestamp: number
 ): Promise<CoinGeckoResponse> => {
-  const time = new Date(timestamp * 1000); // idk why but it works
+  const time = new Date(timestamp); // idk why but it works
   const timeString: string = `${String(time.getDay()).padStart(
     2,
     "0"
   )}-${String(time.getMonth()).padStart(2, "0")}-${time.getFullYear()}`;
 
-  return axios.get(
+  const { data } = await axios.get(
     `https://api.coingecko.com/api/v3/coins/${coin}/history?date=${timeString}`
   );
+
+  return data;
 };
 
 export { fetchPrice };
