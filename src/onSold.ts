@@ -1,10 +1,14 @@
 import { Sold } from "@paintswap/marketplace-interactions";
+import axios from "axios";
 import { ethers, BigNumber } from "ethers";
-import { isConstValueNode } from "graphql";
 import { fetchPrice } from "./providers/coingecko";
 import { fetchContractTx } from "./providers/ftmscan";
 import { fetchContractName } from "./providers/generic-contract";
-import { fetchItemHistory, HistoryItem } from "./providers/ps-api";
+import {
+  fetchItemHistory,
+  fetchNftMetadata,
+  HistoryItem,
+} from "./providers/ps-api";
 import { bigNumberToSimpleNumber } from "./utils/price";
 
 const onSold = async (
@@ -50,15 +54,17 @@ const onSold = async (
       );
     });
 
+    let mintQty = 0;
+    let mintTx;
     let foundIt = false;
     for (const tx of sellerTxs) {
       if (foundIt) break;
       const receipt = await provider.getTransactionReceipt(tx.hash);
 
+      mintQty = 0;
       for (const log of receipt.logs) {
-        if (foundIt) break;
-
         if (log.topics.length === 4) {
+          mintQty++;
           if (
             log.topics.filter((receipt) =>
               BigNumber.from(receipt).eq(sale.tokenID)
@@ -66,20 +72,23 @@ const onSold = async (
           ) {
             // Probably the mint event
             foundIt = true;
-            lastSale = {
-              action: "0",
-              actionId: "0",
-              data: BigNumber.from(tx.value).toString(),
-              hash: tx.hash,
-              id: "0",
-              numericId: "0",
-              timestamp: tx.timeStamp,
-              version: 2,
-            };
-            break;
+            mintTx = tx;
           }
         }
       }
+    }
+    if (mintTx) {
+      console.log("mintvalue", BigNumber.from(mintTx.value));
+      lastSale = {
+        action: "0",
+        actionId: "0",
+        data: BigNumber.from(mintTx.value).mul(10).div(mintQty).toString(),
+        hash: mintTx.hash,
+        id: "0",
+        numericId: "0",
+        timestamp: mintTx.timeStamp,
+        version: 2,
+      };
     }
     mintedOrBought = "Minted";
   }
@@ -152,7 +161,7 @@ const onSold = async (
     }
 
     tweetMessage += `https://paintswap.finance/marketplace/${sale.marketplaceId}`;
-    console.log(tweetMessage);
+    console.log(tweetMessage, await fetchNftMetadata(nft.uri));
   } else {
     console.log("No last sale");
   }

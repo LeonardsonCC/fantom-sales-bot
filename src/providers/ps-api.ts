@@ -1,4 +1,5 @@
 import axios from "axios";
+import { ByteLengthQueuingStrategy } from "stream/web";
 
 interface ItemDetails {
   nft: {
@@ -38,4 +39,15 @@ const fetchItemHistory = async (
   return data;
 };
 
-export { HistoryItem, fetchItemHistory };
+const fetchNftMetadata = async (uri: string) => {
+  try {
+    const { data } = await axios.get(uri);
+
+    return data;
+  } catch (err) {
+    console.log("error fetching metadata");
+    return {};
+  }
+};
+
+export { HistoryItem, fetchItemHistory, fetchNftMetadata };
