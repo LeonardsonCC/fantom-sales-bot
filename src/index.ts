@@ -1,8 +1,7 @@
 import dotenv from "dotenv";
 import { ethers } from "ethers";
-import { MarketplaceV2, Sold } from "@paintswap/marketplace-interactions";
-import { fetchItemHistory, HistoryItem } from "./providers/ps-api";
-import { fetchPrice } from "./providers/coingecko";
+import { MarketplaceV2 } from "@paintswap/marketplace-interactions";
+import onSold from "./onSold";
 
 dotenv.config();
 
@@ -11,14 +10,6 @@ const provider = new ethers.providers.JsonRpcProvider(
 );
 
 const marketplace = new MarketplaceV2(provider);
-
-console.log("Initializing listeners");
-marketplace.onSold(async (sale) => {
-  const timestamp = Date.now();
-  const { nft } = await fetchItemHistory(
-    sale.collection,
-    sale.tokenID.toNumber()
-  );
 
 console.log("Initializing listeners");
 marketplace.onSold((sale) => {
