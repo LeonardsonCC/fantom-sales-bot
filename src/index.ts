@@ -13,5 +13,6 @@ const marketplace = new MarketplaceV2(provider);
 
 console.log("Initializing listeners");
 marketplace.onSold((sale) => {
+  console.log("DEBUG SALE", sale);
   onSold(sale, provider);
 });

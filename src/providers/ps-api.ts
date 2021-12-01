@@ -22,6 +22,16 @@ interface HistoryItem {
   version: number;
 }
 
+interface ERC711Metadata {
+  name: string;
+  description: string;
+  image: string;
+  attributes: {
+    trait_type: string;
+    value: string;
+  }[];
+}
+
 const fetchItemHistory = async (
   contract: string,
   tokenId: number
@@ -39,15 +49,30 @@ const fetchItemHistory = async (
   return data;
 };
 
-const fetchNftMetadata = async (uri: string) => {
+const fetchNftMetadata = async (
+  uri: string
+): Promise<ERC711Metadata | null> => {
   try {
     const { data } = await axios.get(uri);
 
     return data;
   } catch (err) {
     console.log("error fetching metadata");
+    return null;
+  }
+};
+
+const fetchNftImage = async (uri: string) => {
+  try {
+    const { data } = await axios.get(uri, {
+      responseType: "arraybuffer",
+    });
+
+    return data;
+  } catch (err) {
+    console.log("error fetching image");
     return {};
   }
 };
 
-export { HistoryItem, fetchItemHistory, fetchNftMetadata };
+export { HistoryItem, fetchItemHistory, fetchNftMetadata, fetchNftImage };

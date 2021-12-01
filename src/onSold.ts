@@ -6,6 +6,7 @@ import { fetchContractTx } from "./providers/ftmscan";
 import { fetchContractName } from "./providers/generic-contract";
 import {
   fetchItemHistory,
+  fetchNftImage,
   fetchNftMetadata,
   HistoryItem,
 } from "./providers/ps-api";
@@ -98,7 +99,7 @@ const onSold = async (
     salePrice = result.market_data.current_price.usd;
   } catch (e) {
     // TODO make it retry after some seconds
-    console.error("Error trying to fetch sale price", e);
+    console.error("Error trying to fetch sale price", timestamp);
   }
 
   if (lastSale) {
@@ -109,7 +110,10 @@ const onSold = async (
       lastSalePrice = result.market_data.current_price.usd;
     } catch (err) {
       // TODO make it retry after some seconds
-      console.error("Error trying to fetch last sale price", err);
+      console.error(
+        "Error trying to fetch last sale price",
+        lastSale.timestamp
+      );
     }
   }
 
@@ -160,7 +164,14 @@ const onSold = async (
     }
 
     tweetMessage += `https://paintswap.finance/marketplace/${sale.marketplaceId}`;
-    console.log(tweetMessage, await fetchNftMetadata(nft.uri));
+
+    const nftMetadata = await fetchNftMetadata(nft.uri);
+    if (nftMetadata) {
+      const image = await fetchNftImage(nftMetadata.image);
+      console.log(tweetMessage, "with image");
+    } else {
+      console.log(tweetMessage, "without image");
+    }
   } else {
     console.log("No last sale");
   }
