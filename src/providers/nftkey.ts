@@ -33,7 +33,8 @@ const onTokenBought: TypedListener<TokenBoughtEvent> = (
   buyer,
   listing,
   serviceFee,
-  royaltyFee
+  royaltyFee,
+  event
 ) => {
   console.log(
     "TOKEN BOUGHT: ",
@@ -42,7 +43,8 @@ const onTokenBought: TypedListener<TokenBoughtEvent> = (
     buyer,
     listing,
     serviceFee,
-    royaltyFee
+    royaltyFee,
+    event
   );
 
   const sale: Sale = {
@@ -50,6 +52,8 @@ const onTokenBought: TypedListener<TokenBoughtEvent> = (
     tokenId: tokenId,
     value: listing.value,
     date: new Date(),
+    txHash: event.transactionHash,
+    seller: event.address,
     marketplace: Marketplace.NFTKEY,
   };
 
@@ -62,7 +66,8 @@ const onTokenBidAccepted: TypedListener<TokenBidAcceptedEvent> = (
   seller,
   bid,
   serviceFee,
-  royaltyFee
+  royaltyFee,
+  event
 ) => {
   console.log(
     "TOKEN BID ACCEPTED: ",
@@ -79,6 +84,8 @@ const onTokenBidAccepted: TypedListener<TokenBidAcceptedEvent> = (
     tokenId: tokenId,
     value: bid.value,
     date: new Date(),
+    txHash: event.transactionHash,
+    seller: event.address,
     marketplace: Marketplace.NFTKEY,
   };
 
@@ -117,8 +124,10 @@ const getTokenHistory = async (
       tokenId: tokenId,
       value: boughtEvent.args.listing.value,
       date: date,
+      txHash: boughtEvent.transactionHash,
+      seller: boughtEvent.args.listing.seller,
       marketplace: Marketplace.NFTKEY,
-    })
+    });
   }
 
   for (const tokenBidAcceptedEvent of tokenBidAcceptedEvents) {
@@ -131,8 +140,10 @@ const getTokenHistory = async (
       tokenId: tokenId,
       value: tokenBidAcceptedEvent.args.bid.value,
       date: date,
+      txHash: tokenBidAcceptedEvent.transactionHash,
+      seller: tokenBidAcceptedEvent.args.seller,
       marketplace: Marketplace.NFTKEY,
-    })
+    });
   }
 
   return sales;

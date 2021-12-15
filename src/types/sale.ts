@@ -6,5 +6,7 @@ export interface Sale {
   tokenId: ethers.BigNumber;
   value: ethers.BigNumber;
   date: Date;
+  txHash: string;
+  seller: string;
   marketplace: Marketplace;
 }
