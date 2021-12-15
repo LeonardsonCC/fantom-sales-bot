@@ -110,7 +110,7 @@ const getTokenHistory = async (
   for (const boughtEvent of tokenBoughtEvents) {
     const tx = await boughtEvent.getBlock();
 
-    const date = new Date(tx.timestamp);
+    const date = new Date(tx.timestamp * 1000);
 
     sales.push({
       contract: contractAddress,
