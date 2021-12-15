@@ -2,6 +2,7 @@ import { ethers } from "ethers";
 import getProvider from "../providers/blockchain";
 import { fetchPrice } from "../providers/coingecko";
 import { fetchContractName } from "../providers/generic-contract";
+import { Marketplace } from "../types/marketplace";
 import { Sale } from "../types/sale";
 import { bigNumberToSimpleNumber } from "./price";
 
@@ -66,8 +67,16 @@ const makeMessage = async (
       )} (📉 ${percentDiffUsd.toFixed(2)}%)`;
     }
 
+    let url = "";
+    switch (sale.marketplace) {
+      case Marketplace.NFTKEY:
+        url = `https://nftkey.app/token-details/?tokenAddress=${
+          sale.contract
+        }&tokenId=${sale.tokenId.toString()}`;
+    }
+
     return `
-      🧾 Collection: ${collectionName}
+      🧾 Token: ${collectionName} #${sale.tokenId.toString()}
 
       🛍 ${action}: ${roundValue(
       Number(ethers.utils.formatUnits(lastEvent.value))
@@ -81,6 +90,7 @@ const makeMessage = async (
       )} days
       ${gains}
       ${usdGains}
+      ${url}
     `;
   }
   return "";
