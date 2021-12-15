@@ -27,7 +27,7 @@ const subscribe = () => {
   contract.on(contract.filters.TokenBidAccepted(), onTokenBidAccepted);
 };
 
-const onTokenBought: TypedListener<TokenBoughtEvent> = (
+const onTokenBought: TypedListener<TokenBoughtEvent> = async (
   erc721Address,
   tokenId,
   buyer,
@@ -53,14 +53,14 @@ const onTokenBought: TypedListener<TokenBoughtEvent> = (
     value: listing.value,
     date: new Date(),
     txHash: event.transactionHash,
-    seller: event.address,
+    seller: listing.seller,
     marketplace: Marketplace.NFTKEY,
   };
 
   onSold(sale);
 };
 
-const onTokenBidAccepted: TypedListener<TokenBidAcceptedEvent> = (
+const onTokenBidAccepted: TypedListener<TokenBidAcceptedEvent> = async (
   erc721Address,
   tokenId,
   seller,
@@ -85,7 +85,7 @@ const onTokenBidAccepted: TypedListener<TokenBidAcceptedEvent> = (
     value: bid.value,
     date: new Date(),
     txHash: event.transactionHash,
-    seller: event.address,
+    seller: seller,
     marketplace: Marketplace.NFTKEY,
   };
 

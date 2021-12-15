@@ -76,7 +76,8 @@ const makeMessage = async (
     }
 
     return `
-      🧾 Token: ${collectionName} #${sale.tokenId.toString()}
+      🧾 Collection: ${collectionName}
+      🖼️Token: #${sale.tokenId.toString()}
 
       🛍 ${action}: ${roundValue(
       Number(ethers.utils.formatUnits(lastEvent.value))
