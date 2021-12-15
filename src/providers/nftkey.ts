@@ -8,13 +8,20 @@ import {
 import onSold from "../handlers/onSold";
 import { Marketplace } from "../types/marketplace";
 import { Sale } from "../types/sale";
+import getProvider from "./blockchain";
 
 const CONTRACT_ADDRESS = "0x1a7d6ed890b6c284271ad27e7abe8fb5211d0739";
 
-const subscribe = (provider: ethers.providers.JsonRpcProvider) => {
+const initContract = () => {
+  const contract = NFTKey__factory.connect(CONTRACT_ADDRESS, getProvider());
+
+  return contract;
+};
+
+const subscribe = () => {
   console.log("Subscribing...");
 
-  const contract = NFTKey__factory.connect(CONTRACT_ADDRESS, provider);
+  const contract = initContract();
 
   contract.on(contract.filters.TokenBought(), onTokenBought);
   contract.on(contract.filters.TokenBidAccepted(), onTokenBidAccepted);
@@ -42,6 +49,7 @@ const onTokenBought: TypedListener<TokenBoughtEvent> = (
     contract: erc721Address,
     tokenId: tokenId,
     value: listing.value,
+    date: new Date(),
     marketplace: Marketplace.NFTKEY,
   };
 
@@ -70,12 +78,31 @@ const onTokenBidAccepted: TypedListener<TokenBidAcceptedEvent> = (
     contract: erc721Address,
     tokenId: tokenId,
     value: bid.value,
+    date: new Date(),
     marketplace: Marketplace.NFTKEY,
   };
 
   onSold(sale);
 };
 
+const getTokenHistory = async (
+  contractAddress: string,
+  tokenId: ethers.BigNumber
+) => {
+  const contract = initContract();
+
+  const tokenBoughtFilter = contract.filters.TokenBought();
+  const tokenBoughtEvents = await contract.queryFilter(tokenBoughtFilter);
+
+  const tokenBidAcceptedFilter = contract.filters.TokenBidAccepted();
+  const tokenBidAcceptedEvents = await contract.queryFilter(
+    tokenBidAcceptedFilter
+  );
+
+  console.log("ALL SALES", tokenBoughtEvents, onTokenBidAccepted);
+};
+
 export default {
   subscribe,
+  getTokenHistory,
 };

@@ -5,5 +5,6 @@ export interface Sale {
   contract: string;
   tokenId: ethers.BigNumber;
   value: ethers.BigNumber;
+  date: Date;
   marketplace: Marketplace;
 }
