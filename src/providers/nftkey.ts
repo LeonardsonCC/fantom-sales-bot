@@ -88,18 +88,54 @@ const onTokenBidAccepted: TypedListener<TokenBidAcceptedEvent> = (
 const getTokenHistory = async (
   contractAddress: string,
   tokenId: ethers.BigNumber
-) => {
+): Promise<Sale[]> => {
   const contract = initContract();
 
-  const tokenBoughtFilter = contract.filters.TokenBought();
+  // Get old sales from filtering by nft
+  const tokenBoughtFilter = contract.filters.TokenBought(
+    contractAddress,
+    tokenId
+  );
   const tokenBoughtEvents = await contract.queryFilter(tokenBoughtFilter);
 
-  const tokenBidAcceptedFilter = contract.filters.TokenBidAccepted();
+  const tokenBidAcceptedFilter = contract.filters.TokenBidAccepted(
+    contractAddress,
+    tokenId
+  );
   const tokenBidAcceptedEvents = await contract.queryFilter(
     tokenBidAcceptedFilter
   );
 
-  console.log("ALL SALES", tokenBoughtEvents, onTokenBidAccepted);
+  const sales: Sale[] = [];
+  for (const boughtEvent of tokenBoughtEvents) {
+    const tx = await boughtEvent.getBlock();
+
+    const date = new Date(tx.timestamp);
+
+    sales.push({
+      contract: contractAddress,
+      tokenId: tokenId,
+      value: boughtEvent.args.listing.value,
+      date: date,
+      marketplace: Marketplace.NFTKEY,
+    })
+  }
+
+  for (const tokenBidAcceptedEvent of tokenBidAcceptedEvents) {
+    const tx = await tokenBidAcceptedEvent.getTransaction();
+
+    const date = new Date(tx.timestamp!);
+
+    sales.push({
+      contract: contractAddress,
+      tokenId: tokenId,
+      value: tokenBidAcceptedEvent.args.bid.value,
+      date: date,
+      marketplace: Marketplace.NFTKEY,
+    })
+  }
+
+  return sales;
 };
 
 export default {
