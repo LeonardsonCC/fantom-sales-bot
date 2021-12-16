@@ -67,31 +67,40 @@ const makeMessage = async (
     }
 
     let url = "";
+    let marketplaceName = "";
     switch (sale.marketplace) {
       case Marketplace.NFTKEY:
         url = `https://nftkey.app/token-details/?tokenAddress=${
           sale.contract
         }&tokenId=${sale.tokenId.toString()}`;
+        marketplaceName = "🔑 NFTKEY";
+        break;
+      case Marketplace.PAINTSWAP:
+        url = `https://paintswap.finance/marketplace/assets/${sale.contract}/${sale.tokenId}`;
+        marketplaceName = "🖌️ PaintSwap";
+        break;
     }
 
-    return `
-      🧾 Collection: ${collectionName}
-      🖼️Token: #${sale.tokenId.toString()}
+    let message = "";
+    message += `${marketplaceName}\n`;
+    message += `🧾 Collection: ${collectionName}\n`;
+    message += `🖼️Token: #${sale.tokenId.toString()}\n\n`;
 
-      🛍 ${action}: ${roundValue(
+    message += `🛍 ${action}: ${roundValue(
       Number(ethers.utils.formatUnits(lastEvent.value))
-    )} FTM @ $${lastEventPrice.toFixed(3)}
-      💰 Sold: ${Number(ethers.utils.formatUnits(sale.value)).toFixed(
-        3
-      )} FTM @ $${salePrice.toFixed(3)}   
+    )} FTM @ $${lastEventPrice.toFixed(3)}\n`;
+    message += `💰 Sold: ${Number(ethers.utils.formatUnits(sale.value)).toFixed(
+      3
+    )} FTM @ $${salePrice.toFixed(3)}\n\n`;
 
-      🤝 HODL: ${Math.floor(
-        (sale.date.getTime() - lastEvent.date.getTime()) / (1000 * 60 * 60 * 24)
-      )} days
-      ${gains}
-      ${usdGains}
-      ${url}
-    `;
+    message += `🤝 HODL: ${Math.floor(
+      (sale.date.getTime() - lastEvent.date.getTime()) / (1000 * 60 * 60 * 24)
+    )} days\n`;
+    message += `${gains}\n`;
+    message += `${usdGains}\n`;
+    message += `${url}`;
+
+    return message;
   }
   return "";
 };
