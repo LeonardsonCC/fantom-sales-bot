@@ -20,7 +20,6 @@ const makeMessage = async (
 ): Promise<string> => {
   let salePrice, lastEventPrice;
   try {
-    console.log("TIME", sale.date.getTime());
     const saleResult = await fetchPrice("fantom", sale.date.getTime());
     salePrice = saleResult.market_data.current_price.usd;
   } catch (err) {
@@ -82,8 +81,8 @@ const makeMessage = async (
       🛍 ${action}: ${roundValue(
       Number(ethers.utils.formatUnits(lastEvent.value))
     )} FTM @ $${lastEventPrice.toFixed(3)}
-      💰 Sold: ${roundValue(
-        Number(ethers.utils.formatUnits(sale.value))
+      💰 Sold: ${Number(ethers.utils.formatUnits(sale.value)).toFixed(
+        3
       )} FTM @ $${salePrice.toFixed(3)}   
 
       🤝 HODL: ${Math.floor(

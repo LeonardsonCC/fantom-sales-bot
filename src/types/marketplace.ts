@@ -1,4 +1,5 @@
 export enum Marketplace {
-  NFTKEY,
   MINTED,
+  NFTKEY,
+  PAINTSWAP,
 }

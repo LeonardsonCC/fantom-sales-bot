@@ -19,10 +19,11 @@ const getMintAsSale = async (
   seller: string
 ): Promise<Sale | null> => {
   const provider = getProvider();
-  const txs = await fetchContractTx(contractAddress);
+  const txs = await fetchContractTx(seller);
   const sellerTxs = txs.filter((tx) => {
     return (
       tx.from.toLowerCase() === seller.toLowerCase() &&
+      tx.to.toLowerCase() === contractAddress.toLowerCase() &&
       tx.contractAddress === "" &&
       ethers.BigNumber.from(tx.value).gt(0)
     );
