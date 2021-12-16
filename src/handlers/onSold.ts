@@ -1,5 +1,6 @@
 import { getMintAsSale } from "../providers/blockchain";
 import nftkey from "../providers/nftkey";
+import paintswap from "../providers/paintswap";
 import { Sale } from "../types/sale";
 import { Action, makeMessage } from "../utils/message";
 
@@ -11,7 +12,12 @@ const onSold = async (sale: Sale) => {
     sale.tokenId
   );
 
-  let history = [...nftkeyHistory];
+  const paintswapHistory = await paintswap.getTokenHistory(
+    sale.contract,
+    sale.tokenId
+  );
+
+  let history = [...nftkeyHistory, ...paintswapHistory];
   history = history.filter((item) => item.txHash !== sale.txHash);
 
   let message = "";
