@@ -10,11 +10,16 @@ const client = new TwitterApi({
   accessSecret: process.env.ACCESS_SECRET!,
 });
 
-const tweet = async (message: string, image?: string) => {
+const tweet = async (
+  message: string,
+  image?: string,
+  imageType: "PNG" | "JPG" | "GIF" = "PNG"
+) => {
+  console.log("IMAGE TYPE", imageType);
   // client.v2.tweet(message).then(console.log).catch(console.log);
   if (image) {
     try {
-      const mediaId = await client.v1.uploadMedia(image, { type: "PNG" });
+      const mediaId = await client.v1.uploadMedia(image, { type: imageType });
       await client.v2.tweet(message, {
         media: {
           media_ids: [mediaId],

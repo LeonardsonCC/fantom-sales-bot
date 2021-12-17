@@ -66,8 +66,12 @@ const onSold = async (sale: Sale) => {
         }
       );
 
-      console.log(typeof image);
-      tweet(message, image);
+      let filetype: "PNG" | "JPG" | "GIF" = data.image
+        .substr(data.image.length - 3)
+        .toUpperCase();
+      if (!["PNG", "GIF", "JPG"].includes(filetype)) filetype = "PNG";
+
+      tweet(message, image, filetype);
     } catch (err) {
       console.log("can't get the image...", err);
       tweet(message);
