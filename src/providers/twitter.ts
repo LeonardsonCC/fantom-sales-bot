@@ -26,10 +26,11 @@ const tweet = async (
         },
       });
     } catch (err) {
+      console.log("error uploading image... ", err);
       await client.v2.tweet(message);
     }
   } else {
-    console.log("Image doesn't work");
+    console.log("image not sent... ");
     await client.v2.tweet(message);
   }
 };
