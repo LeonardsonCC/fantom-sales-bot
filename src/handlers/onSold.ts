@@ -1,8 +1,11 @@
 import { getMintAsSale } from "../providers/blockchain";
 import nftkey from "../providers/nftkey";
 import paintswap from "../providers/paintswap";
+import { tweet } from "../providers/twitter";
 import { Sale } from "../types/sale";
 import { Action, makeMessage } from "../utils/message";
+import { getTokenUri } from "../providers/generic-contract";
+import axios from "axios";
 
 const onSold = async (sale: Sale) => {
   console.log("Sale received: ", sale);
@@ -49,6 +52,29 @@ const onSold = async (sale: Sale) => {
 
   if (message) {
     console.log("MESSAGE: ", message);
+
+    try {
+      const tokenUri = await getTokenUri(sale.contract, sale.tokenId);
+      const { data } = await axios.get(
+        tokenUri.replace("ipfs://", "https://cloudflare-ipfs.com/ipfs/")
+      );
+      console.log("DATA", data);
+      const { data: image } = await axios.get(
+        data.image.replace("ipfs://", "https://cloudflare-ipfs.com/ipfs/"),
+        {
+          responseType: "arraybuffer",
+        }
+      );
+
+      console.log(typeof image);
+      tweet(message, image);
+    } catch (err) {
+      console.log("can't get the image...", err);
+      tweet(message);
+    }
+    return;
+  } else {
+    console.log("Some error ocurred during message creation");
   }
 };
 

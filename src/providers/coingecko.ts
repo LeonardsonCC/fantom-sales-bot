@@ -18,10 +18,10 @@ const fetchPrice = async (
   } else {
     time = new Date(timestamp);
   }
-  const timeString: string = `${String(time.getDay()).padStart(
+  const timeString: string = `${String(time.getDate()).padStart(
     2,
     "0"
-  )}-${String(time.getMonth()).padStart(2, "0")}-${time.getFullYear()}`;
+  )}-${String(time.getMonth() + 1).padStart(2, "0")}-${time.getFullYear()}`;
 
   let data;
   const response = await axios.get(

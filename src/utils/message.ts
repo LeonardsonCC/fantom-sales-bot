@@ -34,10 +34,7 @@ const makeMessage = async (
   }
 
   if (salePrice && lastEventPrice) {
-    const collectionName = await fetchContractName(
-      getProvider(),
-      sale.contract
-    );
+    const collectionName = await fetchContractName(sale.contract);
 
     let gains = "";
     const diff =

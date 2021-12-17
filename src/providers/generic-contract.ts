@@ -1,16 +1,24 @@
 import { ethers } from "ethers";
-import GenericContract from "../contracts/artifacts/GenericContract.json";
+import { GenericContract__factory } from "../contracts/types";
+import getProvider from "./blockchain";
 
-const fetchContractName = async (
-  provider: ethers.providers.JsonRpcProvider,
-  contractAddress: string
-) => {
-  const contract = new ethers.Contract(
+const fetchContractName = async (contractAddress: string) => {
+  const contract = GenericContract__factory.connect(
     contractAddress,
-    GenericContract,
-    provider
+    getProvider()
   );
   return await contract.name();
 };
 
-export { fetchContractName };
+const getTokenUri = async (
+  contractAddress: string,
+  tokenId: ethers.BigNumber
+) => {
+  const contract = GenericContract__factory.connect(
+    contractAddress,
+    getProvider()
+  );
+  return await contract.tokenURI(tokenId);
+};
+
+export { fetchContractName, getTokenUri };

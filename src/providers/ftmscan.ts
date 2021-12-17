@@ -24,6 +24,9 @@ interface IFTMScanTx {
 const fetchContractTx = async (
   contractAddress: string
 ): Promise<IFTMScanTx[]> => {
+  console.log(
+    `https://api.ftmscan.com/api?module=account&action=txlist&address=${contractAddress}&startblock=0&endblock=99999999&sort=asc&apikey=${process.env.FTMSCAN_API_KEY}`
+  );
   const { data } = await axios.get(
     `https://api.ftmscan.com/api?module=account&action=txlist&address=${contractAddress}&startblock=0&endblock=99999999&sort=asc&apikey=${process.env.FTMSCAN_API_KEY}`
   );
