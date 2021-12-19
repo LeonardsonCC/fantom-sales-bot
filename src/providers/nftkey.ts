@@ -23,8 +23,19 @@ const subscribe = () => {
 
   const contract = initContract();
 
-  contract.on(contract.filters.TokenBought(), onTokenBought);
-  contract.on(contract.filters.TokenBidAccepted(), onTokenBidAccepted);
+  if (process.env.COLLECTION) {
+    contract.on(
+      contract.filters.TokenBought(process.env.COLLECTION),
+      onTokenBought
+    );
+    contract.on(
+      contract.filters.TokenBidAccepted(process.env.COLECTION),
+      onTokenBidAccepted
+    );
+  } else {
+    contract.on(contract.filters.TokenBought(), onTokenBought);
+    contract.on(contract.filters.TokenBidAccepted(), onTokenBidAccepted);
+  }
 };
 
 const onTokenBought: TypedListener<TokenBoughtEvent> = async (

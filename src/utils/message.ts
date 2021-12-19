@@ -80,7 +80,9 @@ const makeMessage = async (
 
     let message = "";
     message += `${marketplaceName}\n`;
-    message += `🧾 Collection: ${collectionName}\n`;
+    if (!process.env.COLLECTION) {
+      message += `🧾 Collection: ${collectionName}\n`;
+    }
     message += `🖼️Token: #${sale.tokenId.toString()}\n\n`;
 
     message += `🛍 ${action}: ${roundValue(
