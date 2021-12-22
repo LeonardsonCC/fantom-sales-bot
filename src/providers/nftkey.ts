@@ -29,7 +29,7 @@ const subscribe = () => {
       onTokenBought
     );
     contract.on(
-      contract.filters.TokenBidAccepted(process.env.COLECTION),
+      contract.filters.TokenBidAccepted(process.env.COLLECTION),
       onTokenBidAccepted
     );
   } else {
