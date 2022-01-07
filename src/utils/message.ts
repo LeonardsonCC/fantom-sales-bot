@@ -95,6 +95,8 @@ const makeMessage = async (
     message += `🤝 HODL: ${Math.floor(
       (sale.date.getTime() - lastEvent.date.getTime()) / (1000 * 60 * 60 * 24)
     )} days\n`;
+
+    // Show the gains
     if (!process.env.SHOW_GAINS || process.env.SHOW_GAINS === "1") {
       message += `${gains}\n`;
       message += `${usdGains}\n`;
