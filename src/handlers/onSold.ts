@@ -6,6 +6,7 @@ import { Sale } from "../types/sale";
 import { Action, makeMessage } from "../utils/message";
 import { getTokenUri } from "../providers/generic-contract";
 import axios from "axios";
+import sharp from "sharp";
 
 const onSold = async (sale: Sale) => {
   console.log("Sale received: ", sale);
@@ -71,7 +72,9 @@ const onSold = async (sale: Sale) => {
         .toUpperCase();
       if (!["PNG", "GIF", "JPG"].includes(filetype)) filetype = "PNG";
 
-      tweet(message, image, filetype);
+      const imageResized: any = await sharp(image).resize(600, 600).toBuffer();
+
+      tweet(message, imageResized, filetype);
     } catch (err) {
       console.log("can't get the image...", err);
       tweet(message);

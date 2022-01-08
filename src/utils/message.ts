@@ -80,7 +80,9 @@ const makeMessage = async (
 
     let message = "";
     message += `${marketplaceName}\n`;
-    message += `🧾 Collection: ${collectionName}\n`;
+    if (!process.env.COLLECTION) {
+      message += `🧾 Collection: ${collectionName}\n`;
+    }
     message += `🖼️Token: #${sale.tokenId.toString()}\n\n`;
 
     message += `🛍 ${action}: ${roundValue(
@@ -93,8 +95,12 @@ const makeMessage = async (
     message += `🤝 HODL: ${Math.floor(
       (sale.date.getTime() - lastEvent.date.getTime()) / (1000 * 60 * 60 * 24)
     )} days\n`;
-    message += `${gains}\n`;
-    message += `${usdGains}\n`;
+
+    // Show the gains
+    if (!process.env.SHOW_GAINS || process.env.SHOW_GAINS === "1") {
+      message += `${gains}\n`;
+      message += `${usdGains}\n`;
+    }
     message += `${url}`;
 
     return message;

@@ -63,6 +63,23 @@ const getMintAsSale = async (
       marketplace: Marketplace.MINTED,
     };
   }
+
+  if (process.env.MINT_PRICE && Number(process.env.MINT_PRICE) > 0) {
+    const date = new Date();
+    date.setDate(date.getDate() - 1);
+    return {
+      contract: contractAddress,
+      tokenId: tokenId,
+      value: ethers.BigNumber.from(process.env.MINT_PRICE).mul(
+        ethers.BigNumber.from(10).pow(18)
+      ),
+      date: date,
+      txHash: "",
+      seller: seller,
+      marketplace: Marketplace.MINTED,
+    };
+  }
+
   return null;
 };
 
