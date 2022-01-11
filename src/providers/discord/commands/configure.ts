@@ -1,6 +1,7 @@
 import { CacheType, Client, CommandInteraction } from "discord.js";
+import { CommandFunction } from ".";
 
-const command = async (
+const command: CommandFunction = async (
   interaction: CommandInteraction<CacheType>,
   client: Client
 ) => {

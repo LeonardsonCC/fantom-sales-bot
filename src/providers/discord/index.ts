@@ -1,5 +1,9 @@
 import { Client, Intents } from "discord.js";
-import { default as commands, COMMANDS_OPTIONS } from "./commands/index";
+import {
+  default as commands,
+  COMMANDS_OPTIONS,
+  COMMANDS,
+} from "./commands/index";
 
 const init = () => {
   const client = new Client({
@@ -19,8 +23,7 @@ const init = () => {
   client.on("interactionCreate", async (interaction) => {
     if (!interaction.isCommand()) return;
 
-    // @ts-ignore
-    commands[interaction.commandName](interaction, client);
+    commands[interaction.commandName as COMMANDS](interaction, client);
   });
 
   client.login(process.env.DISCORD_TOKEN);

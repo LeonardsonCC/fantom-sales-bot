@@ -1,13 +1,27 @@
-import { ApplicationCommandDataResolvable } from "discord.js";
+import {
+  ApplicationCommandDataResolvable,
+  Client,
+  CommandInteraction,
+} from "discord.js";
 import Ping from "./ping";
+import Configure from "./configure";
+
+export type CommandFunction = (
+  interaction: CommandInteraction,
+  client: Client
+) => void;
+export enum COMMANDS {
+  PING = "ping",
+  CONFIGURE = "configure",
+}
 
 const COMMANDS_OPTIONS: ApplicationCommandDataResolvable[] = [
   {
-    name: "ping",
+    name: COMMANDS.PING,
     description: "ping",
   },
   {
-    name: "configure",
+    name: COMMANDS.CONFIGURE,
     description: "Configure discord channel to the bot",
     options: [
       {
@@ -23,4 +37,7 @@ const COMMANDS_OPTIONS: ApplicationCommandDataResolvable[] = [
 export { COMMANDS_OPTIONS };
 export default {
   ping: Ping,
+  configure: Configure,
+} as {
+  [key in COMMANDS]: CommandFunction;
 };
