@@ -11,7 +11,7 @@ enum Action {
   BOUGHT = "Bought",
 }
 
-const roundValue = (value: number) => value.toFixed(3);
+const roundValue = (value: number) => value.toFixed(2);
 
 const makeMessage = async (
   sale: Sale,
