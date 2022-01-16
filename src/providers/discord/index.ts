@@ -14,6 +14,7 @@ const init = () => {
     if (client.application) {
       COMMANDS_OPTIONS.forEach((command) => {
         client.application!.commands.create(command);
+        console.log(`Command ${command.name} registered`);
       });
     }
 

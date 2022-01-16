@@ -1,0 +1,21 @@
+version: '3'
+services:
+  mongo:
+    image: mongo
+    ports:
+      - 27017:27017
+    volumes:
+      - /docker/volumes/mongodb:/data/db
+      - ./mongo-init:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    restart: unless-stopped
+    networks:
+      - app
+  
+  bot:
+    build: .
+    restart: unless-stopped
+    networks:
+      - app
+
+networks:
+  app:

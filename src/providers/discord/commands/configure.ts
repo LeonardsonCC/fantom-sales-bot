@@ -1,5 +1,6 @@
 import { CacheType, Client, CommandInteraction } from "discord.js";
 import { CommandFunction } from ".";
+import * as Database from "../../database";
 
 const command: CommandFunction = async (
   interaction: CommandInteraction<CacheType>,
@@ -11,7 +12,11 @@ const command: CommandFunction = async (
     const channel = client.channels.cache.get(channelId);
     if (channel && channel.isText()) {
       channel.send("The sales will appear here!");
-      // TODO save the channel ID for this guild in a database
+      const db = Database.connect();
+      db.collection("bot").insertOne({
+        guildId: interaction.guildId,
+        salesChannelId: interaction.channelId,
+      });
     }
   }
 };
