@@ -16,6 +16,7 @@ const post = async (
   sale: Sale,
   actionBefore: Sale,
   action: Action,
+  imageUrl?: string,
   image?: string,
   imageType: "PNG" | "JPG" | "GIF" = "PNG"
 ) => {

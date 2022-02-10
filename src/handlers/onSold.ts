@@ -66,6 +66,7 @@ const onSold = async (sale: Sale) => {
           sale,
           actionBefore,
           action,
+          image.url,
           image.imageResized,
           image.filetype
         );
@@ -107,6 +108,7 @@ const getImage = async (contract: string, tokenId: ethers.BigNumber) => {
     const imageResized: any = await sharp(image).resize(600, 600).toBuffer();
 
     return {
+      url: data.image.replace("ipfs://", "https://cloudflare-ipfs.com/ipfs/"),
       imageResized,
       filetype,
     };
