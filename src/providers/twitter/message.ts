@@ -1,10 +1,10 @@
 import { ethers } from "ethers";
-import getProvider from "../providers/blockchain";
-import { fetchPrice } from "../providers/coingecko";
-import { fetchContractName } from "../providers/generic-contract";
-import { Marketplace } from "../types/marketplace";
-import { Sale } from "../types/sale";
-import { bigNumberToSimpleNumber } from "./price";
+import getProvider from "../../providers/blockchain";
+import { fetchPrice } from "../../providers/coingecko";
+import { fetchContractName } from "../../providers/generic-contract";
+import { Marketplace } from "../../types/marketplace";
+import { Sale } from "../../types/sale";
+import { bigNumberToSimpleNumber } from "./../../utils/price";
 
 enum Action {
   MINTED = "Minted",
