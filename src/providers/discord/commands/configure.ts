@@ -13,10 +13,26 @@ const command: CommandFunction = async (
     if (channel && channel.isText()) {
       channel.send("The sales will appear here!");
       const db = Database.connect();
-      db.collection("bot").insertOne({
-        guildId: interaction.guildId,
-        salesChannelId: interaction.channelId,
-      });
+
+      try {
+        db.collection("bot").updateOne(
+          {
+            guildId: interaction.guildId,
+          },
+          {
+            $set: { salesChannelId: channel.id },
+          },
+          {
+            upsert: true,
+          }
+        );
+      } catch (err) {
+        console.log("ERROR UPDATING...", err);
+        db.collection("bot").insertOne({
+          guildId: interaction.guildId,
+          salesChannelId: channel.id,
+        });
+      }
     }
   }
 };
