@@ -1,5 +1,7 @@
 import { TwitterApi } from "twitter-api-v2";
 import dotenv from "dotenv";
+import { Sale } from "../../types/sale";
+import { Action, makeMessage } from "./message";
 
 dotenv.config();
 
@@ -10,13 +12,18 @@ const client = new TwitterApi({
   accessSecret: process.env.ACCESS_SECRET!,
 });
 
-const tweet = async (
-  message: string,
+const post = async (
+  sale: Sale,
+  actionBefore: Sale,
+  action: Action,
+  imageUrl?: string,
   image?: string,
   imageType: "PNG" | "JPG" | "GIF" = "PNG"
 ) => {
   console.log("IMAGE TYPE", imageType);
-  // client.v2.tweet(message).then(console.log).catch(console.log);
+
+  const message = await makeMessage(sale, actionBefore, action);
+
   if (image) {
     try {
       const mediaId = await client.v1.uploadMedia(image, { type: imageType });
@@ -35,4 +42,4 @@ const tweet = async (
   }
 };
 
-export { tweet };
+export { post };

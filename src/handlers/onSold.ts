@@ -1,12 +1,13 @@
 import { getMintAsSale } from "../providers/blockchain";
 import nftkey from "../providers/nftkey";
 import paintswap from "../providers/paintswap";
-import { tweet } from "../providers/twitter";
 import { Sale } from "../types/sale";
-import { Action, makeMessage } from "../utils/message";
+import { Action } from "../providers/twitter/message";
 import { getTokenUri } from "../providers/generic-contract";
 import axios from "axios";
 import sharp from "sharp";
+import { providers } from "../providers/posters";
+import { ethers } from "ethers";
 
 const onSold = async (sale: Sale) => {
   console.log("Sale received: ", sale);
@@ -24,7 +25,8 @@ const onSold = async (sale: Sale) => {
   let history = [...nftkeyHistory, ...paintswapHistory];
   history = history.filter((item) => item.txHash !== sale.txHash);
 
-  let message = "";
+  let action: Action | undefined = undefined;
+  let actionBefore: Sale | undefined = undefined;
   if (history.length > 0) {
     // have sales after mint
     history.sort((a, b) => {
@@ -37,51 +39,81 @@ const onSold = async (sale: Sale) => {
       return 0;
     });
 
-    const bought = history[history.length - 1];
-    message = await makeMessage(sale, bought, Action.BOUGHT);
+    actionBefore = history[history.length - 1];
+    action = Action.BOUGHT;
   } else {
-    const minted = await getMintAsSale(
-      sale.contract,
-      sale.tokenId,
-      sale.seller
-    );
-    console.log("MINTED", minted);
-    if (minted) {
-      message = await makeMessage(sale, minted, Action.MINTED);
+    const mint = await getMintAsSale(sale.contract, sale.tokenId, sale.seller);
+    console.log("MINTED", mint);
+    if (mint) {
+      action = Action.MINTED;
+      actionBefore = mint;
     }
   }
 
-  if (message) {
-    console.log("MESSAGE: ", message);
+  console.log("HAS ACTION BEFORE: ", action, actionBefore);
 
-    try {
-      const tokenUri = await getTokenUri(sale.contract, sale.tokenId);
-      const { data } = await axios.get(
-        tokenUri.replace("ipfs://", "https://cloudflare-ipfs.com/ipfs/")
-      );
-      console.log("DATA", data);
-      const { data: image } = await axios.get(
-        data.image.replace("ipfs://", "https://cloudflare-ipfs.com/ipfs/"),
-        {
-          responseType: "arraybuffer",
-        }
-      );
+  try {
+    const image = await getImage(sale.contract, sale.tokenId);
 
-      let filetype: "PNG" | "JPG" | "GIF" = data.image
-        .substr(data.image.length - 3)
-        .toUpperCase();
-      if (!["PNG", "GIF", "JPG"].includes(filetype)) filetype = "PNG";
+    if (!image) throw new Error("Can't find image");
 
-      const imageResized: any = await sharp(image).resize(600, 600).toBuffer();
+    providers.forEach((provider) => {
+      if (
+        typeof actionBefore !== "undefined" &&
+        typeof action !== "undefined"
+      ) {
+        provider.post(
+          sale,
+          actionBefore,
+          action,
+          image.url,
+          image.imageResized,
+          image.filetype
+        );
+      }
+    });
+  } catch (err) {
+    console.log(err);
+    providers.forEach((provider) => {
+      if (
+        typeof actionBefore !== "undefined" &&
+        typeof action !== "undefined"
+      ) {
+        provider.post(sale, actionBefore, action);
+      }
+    });
+  }
+  return;
+};
 
-      tweet(message, imageResized, filetype);
-    } catch (err) {
-      console.log("can't get the image...", err);
-      tweet(message);
-    }
-    return;
-  } else {
-    console.log("Some error ocurred during message creation");
+const getImage = async (contract: string, tokenId: ethers.BigNumber) => {
+  try {
+    const tokenUri = await getTokenUri(contract, tokenId);
+    const { data } = await axios.get(
+      tokenUri.replace("ipfs://", "https://cloudflare-ipfs.com/ipfs/")
+    );
+    console.log("DATA", data);
+    const { data: image } = await axios.get(
+      data.image.replace("ipfs://", "https://cloudflare-ipfs.com/ipfs/"),
+      {
+        responseType: "arraybuffer",
+      }
+    );
+
+    let filetype: "PNG" | "JPG" | "GIF" = data.image
+      .substr(data.image.length - 3)
+      .toUpperCase();
+    if (!["PNG", "GIF", "JPG"].includes(filetype)) filetype = "PNG";
+
+    const imageResized: any = await sharp(image).resize(600, 600).toBuffer();
+
+    return {
+      url: data.image.replace("ipfs://", "https://cloudflare-ipfs.com/ipfs/"),
+      imageResized,
+      filetype,
+    };
+  } catch (err) {
+    return null;
   }
 };
 
