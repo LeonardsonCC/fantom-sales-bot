@@ -4,7 +4,7 @@ import {
   CommandInteraction,
 } from "discord.js";
 import Ping from "./ping";
-import Configure from "./configure";
+import SetSalesChannel from "./set-sales-channel";
 
 export type CommandFunction = (
   interaction: CommandInteraction,
@@ -12,7 +12,7 @@ export type CommandFunction = (
 ) => void;
 export enum COMMANDS {
   PING = "ping",
-  CONFIGURE = "configure",
+  SET_SALES_CHANNEL = "set-sales-channel",
 }
 
 const COMMANDS_OPTIONS: ApplicationCommandDataResolvable[] = [
@@ -21,7 +21,7 @@ const COMMANDS_OPTIONS: ApplicationCommandDataResolvable[] = [
     description: "ping",
   },
   {
-    name: COMMANDS.CONFIGURE,
+    name: COMMANDS.SET_SALES_CHANNEL,
     description: "Configure discord channel to the bot",
     options: [
       {
@@ -37,7 +37,7 @@ const COMMANDS_OPTIONS: ApplicationCommandDataResolvable[] = [
 export { COMMANDS_OPTIONS };
 export default {
   ping: Ping,
-  configure: Configure,
+  "set-sales-channel": SetSalesChannel,
 } as {
   [key in COMMANDS]: CommandFunction;
 };
