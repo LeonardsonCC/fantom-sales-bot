@@ -8,6 +8,7 @@ const command: CommandFunction = async (
 ) => {
   const channelId = interaction.options.getChannel("channel")?.id;
   if (channelId) {
+    console.log("SETTING CHANNEL TO SERVER: ", interaction.guildId, channelId);
     await interaction.reply(`channel ${channelId}!`);
     const channel = client.channels.cache.get(channelId);
     if (channel && channel.isText()) {
