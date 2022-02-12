@@ -108,7 +108,12 @@ const getImage = async (contract: string, tokenId: ethers.BigNumber) => {
     const imageResized: any = await sharp(image).resize(600, 600).toBuffer();
 
     return {
-      url: data.image.replace("ipfs://", "https://cloudflare-ipfs.com/ipfs/"),
+      url: data.image
+        .replace("ipfs://", "https://cloudflare-ipfs.com/ipfs/")
+        .replace(
+          "https://gateway.pinata.cloud/ipfs/",
+          "https://cloudflare-ipfs.com/ipfs/"
+        ),
       imageResized,
       filetype,
     };
