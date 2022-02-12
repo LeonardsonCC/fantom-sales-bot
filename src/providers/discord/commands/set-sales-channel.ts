@@ -9,10 +9,15 @@ const command: CommandFunction = async (
   const channelId = interaction.options.getChannel("channel")?.id;
   if (channelId) {
     console.log("SETTING CHANNEL TO SERVER: ", interaction.guildId, channelId);
-    await interaction.reply(`channel ${channelId}!`);
+
     const channel = client.channels.cache.get(channelId);
     if (channel && channel.isText()) {
-      channel.send("The sales will appear here!");
+      try {
+        await channel.send("The sales will appear here!");
+      } catch (err) {
+        await interaction.user.send("I can't post on that channel...");
+        return;
+      }
       const db = Database.connect();
 
       try {
