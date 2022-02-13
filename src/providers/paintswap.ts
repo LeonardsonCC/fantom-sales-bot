@@ -66,7 +66,7 @@ const initContract = () => {
 };
 
 const subscribe = () => {
-  console.log("Subscribing...");
+  console.log("Subscribing to PaintSwap...");
 
   const contract = initContract();
 
@@ -84,17 +84,6 @@ const onSoldHandler: TypedListener<SoldEvent> = async (
   _,
   event
 ) => {
-  console.log(
-    "PAINTSWAY: TOKEN SOLD: ",
-    marketplaceId,
-    nfts,
-    tokenIds,
-    amountBatches,
-    price,
-    buyer,
-    seller
-  );
-
   // Have to get the data from their API
   const { data: actionInfo } = await axios.get<
     undefined,
@@ -107,8 +96,6 @@ const onSoldHandler: TypedListener<SoldEvent> = async (
   ) {
     return;
   }
-
-  console.log("RESULT API", actionInfo);
 
   const value = ethers.BigNumber.from(actionInfo.sale.price);
 

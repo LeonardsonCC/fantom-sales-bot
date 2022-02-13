@@ -19,7 +19,7 @@ const initContract = () => {
 };
 
 const subscribe = () => {
-  console.log("Subscribing...");
+  console.log("Subscribing to NFTKEY...");
 
   const contract = initContract();
 
