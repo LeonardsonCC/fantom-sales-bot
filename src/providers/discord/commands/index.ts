@@ -5,6 +5,7 @@ import {
 } from "discord.js";
 import Ping from "./ping";
 import SetSalesChannel from "./set-sales-channel";
+import SetMintChannel from "./set-mint-channel";
 
 export type CommandFunction = (
   interaction: CommandInteraction,
@@ -13,6 +14,7 @@ export type CommandFunction = (
 export enum COMMANDS {
   PING = "ping",
   SET_SALES_CHANNEL = "set-sales-channel",
+  SET_MINT_CHANNEL = "set-mint-channel",
 }
 
 const COMMANDS_OPTIONS: ApplicationCommandDataResolvable[] = [
@@ -32,12 +34,31 @@ const COMMANDS_OPTIONS: ApplicationCommandDataResolvable[] = [
       },
     ],
   },
+  {
+    name: COMMANDS.SET_MINT_CHANNEL,
+    description: "Track a contract mint",
+    options: [
+      {
+        name: "channel",
+        description: "channel that bot will post",
+        type: "CHANNEL",
+        required: true,
+      },
+      {
+        name: "collection",
+        description: "collection address to track",
+        type: "STRING",
+        required: true,
+      },
+    ],
+  },
 ];
 
 export { COMMANDS_OPTIONS };
 export default {
   ping: Ping,
   "set-sales-channel": SetSalesChannel,
+  "set-mint-channel": SetMintChannel,
 } as {
   [key in COMMANDS]: CommandFunction;
 };

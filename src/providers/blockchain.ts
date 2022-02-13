@@ -13,6 +13,15 @@ const getProvider = () => {
   return provider;
 };
 
+const isValidAddress = (addr: string): boolean => {
+  try {
+    ethers.utils.getAddress(addr);
+    return true;
+  } catch (err) {
+    return false;
+  }
+};
+
 const getMintAsSale = async (
   contractAddress: string,
   tokenId: ethers.BigNumber,
@@ -83,5 +92,5 @@ const getMintAsSale = async (
   return null;
 };
 
-export { getMintAsSale };
+export { getMintAsSale, isValidAddress };
 export default getProvider;
