@@ -9,11 +9,16 @@ It started as a way for me to learn more about blockchain and NFT stuffs, but it
 and I don't have time to maintain the project, so I'm opening it.
 
 ## About the project
+
 Ok, I know there's some really bad code here... But that's why I'm making this public!
 The bot listens Fantom's JSON RPC to get events from [NFTKEY](https://nftkey.app/) and [PaintSwap](https://paintswap.finance/), then it is converted to a pattern inside application and used to post on Twitter and Discord.
 If it don't have a previous sale, I'll look for the seller's transactions in the contract of the NFT,
 then find the transaction that have a pattern of 3 parameters, like a transfer method from wallet 0x0 to the seller wallet and assume that is the mint transaction. Get the topics quantity of that transaction (usually is a topic to each token), and divide the quantity of topics by the value of the transaction.
 
+## Marketplaces
+
+- [NFTKEY](https://nftkey.app/)
+- [PaintSwap](https://paintswap.finance/)
 
 ## Environment variables
 
