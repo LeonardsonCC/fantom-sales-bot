@@ -101,13 +101,6 @@ const onSoldHandler: TypedListener<SoldEvent> = async (
     AxiosResponse<ActionInfo>
   >(`https://api.paintswap.finance/v2/sales/${marketplaceId}`);
 
-  if (
-    process.env.COLLECTION &&
-    process.env.COLLECTION !== actionInfo.sale.address
-  ) {
-    return;
-  }
-
   console.log("RESULT API", actionInfo);
 
   const value = ethers.BigNumber.from(actionInfo.sale.price);

@@ -67,9 +67,8 @@ const makeMessage = async (
     let marketplaceName = "";
     switch (sale.marketplace) {
       case Marketplace.NFTKEY:
-        url = `https://nftkey.app/token-details/?tokenAddress=${
-          sale.contract
-        }&tokenId=${sale.tokenId.toString()}`;
+        url = `https://nftkey.app/token-details/?tokenAddress=${sale.contract
+          }&tokenId=${sale.tokenId.toString()}`;
         marketplaceName = "🔑 NFTKEY";
         break;
       case Marketplace.PAINTSWAP:
@@ -80,9 +79,7 @@ const makeMessage = async (
 
     let message = "";
     message += `${marketplaceName}\n`;
-    if (!process.env.COLLECTION) {
-      message += `🧾 Collection: ${collectionName}\n`;
-    }
+    message += `🧾 Collection: ${collectionName}\n`;
     message += `🖼️Token: #${sale.tokenId.toString()}\n\n`;
 
     message += `🛍 ${action}: ${roundValue(
@@ -97,10 +94,8 @@ const makeMessage = async (
     )} days\n`;
 
     // Show the gains
-    if (!process.env.SHOW_GAINS || process.env.SHOW_GAINS === "1") {
-      message += `${gains}\n`;
-      message += `${usdGains}\n`;
-    }
+    message += `${gains}\n`;
+    message += `${usdGains}\n`;
     message += `${url}`;
 
     return message;
