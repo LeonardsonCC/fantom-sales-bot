@@ -2,13 +2,13 @@ import { ethers } from "ethers";
 import { PaintSwap__factory } from "../contracts/types";
 import { TypedListener } from "../contracts/types/common";
 import { SoldEvent } from "../contracts/types/PaintSwap";
-import getProvider from "./blockchain";
 import { Sale } from "../types/sale";
 import { Marketplace } from "../types/marketplace";
 import axios, { AxiosResponse } from "axios";
 import onSold from "../handlers/onSold";
+import getProvider from "../providers/blockchain";
 
-const CONTRACT_ADDRESS = "0x6125fD14b6790d5F66509B7aa53274c93dAE70B9";
+const CONTRACT_ADDRESS = "0x1A7d6ed890b6C284271AD27E7AbE8Fb5211D0739";
 
 type NftInfo = {
   nft: {

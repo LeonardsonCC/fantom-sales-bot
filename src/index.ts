@@ -1,10 +1,8 @@
 import dotenv from "dotenv";
 import { ethers } from "ethers";
 import onSold from "./handlers/onSold";
-import nftkey from "./providers/nftkey";
-import paintswap from "./providers/paintswap";
+import listenMarketplacesSales from "./marketplaces";
 
 dotenv.config();
 
-nftkey.subscribe();
-paintswap.subscribe();
+listenMarketplacesSales();

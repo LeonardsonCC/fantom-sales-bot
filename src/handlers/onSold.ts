@@ -1,27 +1,16 @@
 import { getMintAsSale } from "../providers/blockchain";
-import nftkey from "../providers/nftkey";
-import paintswap from "../providers/paintswap";
 import { tweet } from "../providers/twitter";
 import { Sale } from "../types/sale";
 import { Action, makeMessage } from "../utils/message";
 import { getTokenUri } from "../providers/generic-contract";
 import axios from "axios";
 import sharp from "sharp";
+import { getTokenHistory } from "../marketplaces";
 
 const onSold = async (sale: Sale) => {
   console.log("Sale received: ", sale);
 
-  const nftkeyHistory = await nftkey.getTokenHistory(
-    sale.contract,
-    sale.tokenId
-  );
-
-  const paintswapHistory = await paintswap.getTokenHistory(
-    sale.contract,
-    sale.tokenId
-  );
-
-  let history = [...nftkeyHistory, ...paintswapHistory];
+  let history = await getTokenHistory(sale.contract, sale.tokenId);
   history = history.filter((item) => item.txHash !== sale.txHash);
 
   let message = "";

@@ -6,9 +6,9 @@ import {
   TokenBoughtEvent,
 } from "../contracts/types/NFTKey";
 import onSold from "../handlers/onSold";
+import getProvider from "../providers/blockchain";
 import { Marketplace } from "../types/marketplace";
 import { Sale } from "../types/sale";
-import getProvider from "./blockchain";
 
 const CONTRACT_ADDRESS = "0x1a7d6ed890b6c284271ad27e7abe8fb5211d0739";
 
@@ -19,7 +19,7 @@ const initContract = () => {
 };
 
 const subscribe = () => {
-  console.log("Subscribing...");
+  console.log("Subscribing to NFTKEY");
 
   const contract = initContract();
 
