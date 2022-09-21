@@ -1,11 +1,11 @@
 import { getMintAsSale } from "../providers/blockchain";
 import { tweet } from "../providers/twitter";
 import { Sale } from "../types/sale";
-import { Action, makeMessage } from "../utils/message";
 import { getTokenUri } from "../providers/generic-contract";
 import axios from "axios";
 import sharp from "sharp";
 import { getTokenHistory } from "../marketplaces";
+import { makeMessage } from "../output/message";
 
 const onSold = async (sale: Sale) => {
   console.log("Sale received: ", sale);
@@ -27,17 +27,15 @@ const onSold = async (sale: Sale) => {
     });
 
     const bought = history[history.length - 1];
-    message = await makeMessage(sale, bought, Action.BOUGHT);
+    message = await makeMessage(sale, bought);
   } else {
     const minted = await getMintAsSale(
       sale.contract,
       sale.tokenId,
       sale.seller
     );
-    console.log("MINTED", minted);
-    if (minted) {
-      message = await makeMessage(sale, minted, Action.MINTED);
-    }
+
+    message = await makeMessage(sale, minted);
   }
 
   if (message) {
