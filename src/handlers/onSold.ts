@@ -14,6 +14,7 @@ const onSold = async (sale: Sale) => {
   history = history.filter((item) => item.txHash !== sale.txHash);
 
   let message = "";
+  let prevEvent = null;
   if (history.length > 0) {
     // have sales after mint
     history.sort((a, b) => {
@@ -26,17 +27,12 @@ const onSold = async (sale: Sale) => {
       return 0;
     });
 
-    const bought = history[history.length - 1];
-    message = await makeMessage(sale, bought);
+    prevEvent = history[history.length - 1];
   } else {
-    const minted = await getMintAsSale(
-      sale.contract,
-      sale.tokenId,
-      sale.seller
-    );
-
-    message = await makeMessage(sale, minted);
+    prevEvent = await getMintAsSale(sale.contract, sale.tokenId, sale.seller);
   }
+
+  message = await makeMessage(sale, prevEvent);
 
   if (message) {
     console.log("MESSAGE: ", message);
