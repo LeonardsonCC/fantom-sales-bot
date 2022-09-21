@@ -5,9 +5,7 @@ import paintswap from "./paintswap";
 const marketplaces = [nftkey, paintswap];
 
 export function subscribe() {
-  marketplaces.forEach((marketplace) => {
-    marketplace.subscribe();
-  });
+  marketplaces.forEach((mp) => mp.subscribe());
 }
 
 export async function getTokenHistory(
