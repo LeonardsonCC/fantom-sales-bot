@@ -52,9 +52,11 @@ const makeMessageSimple = async (sale: Sale): Promise<string> => {
 
     message += `💰 Sold: ${Number(ethers.utils.formatUnits(sale.value)).toFixed(
       3
-    )} FTM @ $${salePrice.toFixed(3)}\n\n`;
+    )} FTM @ $${salePrice.toFixed(3)}\n`;
 
-    // Show the gains
+    message += `💸 Spent: $${(Number(ethers.utils.formatUnits(sale.value)) * salePrice).toFixed(3)}`;
+
+    message += "\n";
     message += `${url}`;
 
     return message;
