@@ -4,7 +4,7 @@
 
 import { Contract, Signer, utils } from "ethers";
 import { Provider } from "@ethersproject/providers";
-import type { PaintSwap, PaintSwapInterface } from "../PaintSwap";
+import type { PaintSwapV2, PaintSwapV2Interface } from "../PaintSwapV2";
 
 const _abi = [
   {
@@ -1584,15 +1584,15 @@ const _abi = [
   },
 ];
 
-export class PaintSwap__factory {
+export class PaintSwapV2__factory {
   static readonly abi = _abi;
-  static createInterface(): PaintSwapInterface {
-    return new utils.Interface(_abi) as PaintSwapInterface;
+  static createInterface(): PaintSwapV2Interface {
+    return new utils.Interface(_abi) as PaintSwapV2Interface;
   }
   static connect(
     address: string,
     signerOrProvider: Signer | Provider
-  ): PaintSwap {
-    return new Contract(address, _abi, signerOrProvider) as PaintSwap;
+  ): PaintSwapV2 {
+    return new Contract(address, _abi, signerOrProvider) as PaintSwapV2;
   }
 }

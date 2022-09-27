@@ -1,14 +1,14 @@
 import { ethers } from "ethers";
-import { PaintSwap__factory } from "../contracts/types";
+import { PaintSwapV3__factory } from "../contracts/types";
 import { TypedListener } from "../contracts/types/common";
-import { SoldEvent } from "../contracts/types/PaintSwap";
+import { SoldEvent } from "../contracts/types/PaintSwapV3";
 import { Sale } from "../types/sale";
 import { Marketplace } from "../types/marketplace";
 import axios, { AxiosResponse } from "axios";
 import onSold from "../handlers/onSold";
 import getProvider from "../providers/blockchain";
 
-const CONTRACT_ADDRESS = "0x1A7d6ed890b6C284271AD27E7AbE8Fb5211D0739";
+const CONTRACT_ADDRESS = "0xf3dF7b6DCcC267393784a3876d0CbCBDC73147d4";
 
 type NftInfo = {
   nft: {
@@ -61,12 +61,12 @@ type ActionInfo = {
 };
 
 const initContract = () => {
-  const contract = PaintSwap__factory.connect(CONTRACT_ADDRESS, getProvider());
+  const contract = PaintSwapV3__factory.connect(CONTRACT_ADDRESS, getProvider());
   return contract;
 };
 
 const subscribe = () => {
-  console.log("Subscribing...");
+  console.log("Subscribing PaintSwap V3")
 
   const contract = initContract();
 
@@ -82,10 +82,11 @@ const onSoldHandler: TypedListener<SoldEvent> = async (
   buyer,
   seller,
   _,
+  __,
   event
 ) => {
   console.log(
-    "PAINTSWAY: TOKEN SOLD: ",
+    "PAINTSWAP: TOKEN SOLD: ",
     marketplaceId,
     nfts,
     tokenIds,

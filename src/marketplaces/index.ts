@@ -1,8 +1,8 @@
 import { ethers } from "ethers";
 import nftkey from "./nftkey";
-import paintswap from "./paintswap";
+import paintswapV3 from "./paintswap-v3";
 
-const marketplaces = [nftkey, paintswap];
+const marketplaces = [nftkey, paintswapV3];
 
 export function subscribe() {
   marketplaces.forEach((mp) => mp.subscribe());

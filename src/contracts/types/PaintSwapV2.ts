@@ -70,7 +70,7 @@ export type NftDetailsStructOutput = [
   devFeePercentage: BigNumber;
 };
 
-export interface PaintSwapInterface extends utils.Interface {
+export interface PaintSwapV2Interface extends utils.Interface {
   functions: {
     "acceptBestOffer(uint256)": FunctionFragment;
     "acceptOfferAfterDeadlineEnabled()": FunctionFragment;
@@ -838,12 +838,12 @@ export type UpdateStartTimeEvent = TypedEvent<
 
 export type UpdateStartTimeEventFilter = TypedEventFilter<UpdateStartTimeEvent>;
 
-export interface PaintSwap extends BaseContract {
+export interface PaintSwapV2 extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this;
   attach(addressOrName: string): this;
   deployed(): Promise<this>;
 
-  interface: PaintSwapInterface;
+  interface: PaintSwapV2Interface;
 
   queryFilter<TEvent extends TypedEvent>(
     event: TypedEventFilter<TEvent>,
