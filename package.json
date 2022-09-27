@@ -7,7 +7,7 @@
     "build": "rimraf ./build && tsc",
     "build:contracts": "typechain --target=ethers-v5 ./src/contracts/artifacts/*.json --out-dir ./src/contracts/types/",
     "start:dev": "nodemon",
-    "start": "npm run build && node build/index.js"
+    "start": "node build/index.js"
   },
   "devDependencies": {
     "@typechain/ethers-v5": "^8.0.5",
